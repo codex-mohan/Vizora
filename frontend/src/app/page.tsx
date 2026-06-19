@@ -54,8 +54,12 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {loading ? null : user ? (
               <>
-                <span className="hidden text-sm text-slate-400 sm:inline">{user.full_name || user.email}</span>
-                <Link href="/violations" className="hidden rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white sm:inline">Records</Link>
+                <Link
+                  href="/process"
+                  className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
+                >
+                  Process <ArrowRight className="ml-1.5 size-3.5" />
+                </Link>
                 <button onClick={logout} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white">Sign out</button>
               </>
             ) : (
@@ -64,12 +68,6 @@ export default function Home() {
                 <Link href="/signup" className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300">Get started</Link>
               </>
             )}
-            <Link
-              href="/process"
-              className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
-            >
-              Process <ArrowRight className="ml-1.5 size-3.5" />
-            </Link>
             <button
               onClick={() => setMobileNav(!mobileNav)}
               className="grid size-9 place-items-center rounded-lg transition-colors hover:bg-white/[0.06] md:hidden"
