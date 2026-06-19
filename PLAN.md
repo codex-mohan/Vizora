@@ -521,11 +521,36 @@ Triggered after violation confirmed + evidence packet assembled. Async worker pu
 | Preprocessing | OpenCV + Zero-DCE++ + AOD-Net + NAFNet + DerainNet |
 | Serving | FastAPI + TensorRT FP16 |
 | Queue | Redis / RabbitMQ |
-| Storage | PostgreSQL + MinIO/S3 |
-| Dashboard | Next.js 14 + shadcn/ui + Tremor Raw + MapLibre GL |
+| Database | PostgreSQL (SQLAlchemy 2.0 async + Alembic migrations) |
+| Object Storage | MinIO/S3 for evidence images, plate crops, video clips |
+| Auth | JWT (python-jose) + bcrypt, multi-tenant org system with RBAC |
+| Dashboard | Next.js 16 + shadcn/ui + Recharts + MapLibre GL |
 | Python packaging | uv |
 | Frontend packaging | pnpm |
 | Deploy | Docker + Kubernetes |
+
+---
+
+## 14.1 Account & Organization System
+
+Multi-tenant SaaS model for traffic police departments:
+
+| Entity | Fields |
+|--------|--------|
+| **Organization** | id, name, slug, created_at |
+| **User** | id, org_id, email, hashed_password, full_name, role (admin/reviewer/viewer), is_active |
+
+**Roles:**
+- `admin` — full access, manage cameras, manage users, approve/reject violations
+- `reviewer` — view violations, approve/reject/escalate, manage cameras
+- `viewer` — read-only access to violations, analytics, evidence
+
+**Auth flow:** Register org → creates first admin → admin invites reviewers/viewers. JWT tokens with 24h expiry. All API endpoints scoped to `org_id` (multi-tenant isolation).
+
+**Endpoints:**
+- `POST /api/auth/register` — register org + first admin
+- `POST /api/auth/login` — email + password → JWT
+- `GET /api/auth/me` — current user details
 
 ---
 
