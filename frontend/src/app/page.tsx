@@ -11,6 +11,7 @@ import { StatsSection } from "@/components/landing/stats-section";
 import { WorkflowSection } from "@/components/landing/workflow-section";
 import { ArrowRight, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "#features", label: "Features" },
@@ -23,6 +24,7 @@ const navItems = [
 
 export default function Home() {
   const [mobileNav, setMobileNav] = useState(false);
+  const { user, logout, loading } = useAuth();
 
   return (
     <main className="min-h-screen bg-[#100f18] text-slate-100">
@@ -50,12 +52,18 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/violations"
-              className="hidden rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white sm:inline"
-            >
-              Records
-            </Link>
+            {loading ? null : user ? (
+              <>
+                <span className="hidden text-sm text-slate-400 sm:inline">{user.full_name || user.email}</span>
+                <Link href="/violations" className="hidden rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white sm:inline">Records</Link>
+                <button onClick={logout} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white">Sign out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white">Sign in</Link>
+                <Link href="/signup" className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300">Get started</Link>
+              </>
+            )}
             <Link
               href="/process"
               className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
@@ -84,13 +92,32 @@ export default function Home() {
                   {item.label}
                 </Link>
               ))}
-              <Link
-                href="/violations"
-                onClick={() => setMobileNav(false)}
-                className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
-              >
-                Records
-              </Link>
+              {user ? (
+                <Link
+                  href="/violations"
+                  onClick={() => setMobileNav(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                >
+                  Records
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileNav(false)}
+                    className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileNav(false)}
+                    className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                  >
+                    Get started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

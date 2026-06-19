@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { fetchViolations } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { ViolationListItem, ViolationListResponse } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ function exportCsv(items: ViolationListItem[]) {
 
 export default function ViolationsPage() {
   const router = useRouter();
+  const { token, loading: authLoading } = useAuth();
   const [data, setData] = useState<ViolationListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +156,11 @@ export default function ViolationsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    if (!authLoading && !token) router.push("/login");
+  }, [authLoading, token, router]);
+
+  useEffect(() => {
+    if (!token) return;
     let cancelled = false;
     async function load() {
       setLoading(true);

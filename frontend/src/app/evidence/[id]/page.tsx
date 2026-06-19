@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { fetchEvidence, updateViolationStatus } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { EvidencePacket } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +63,8 @@ function LoadingSkeleton() {
 
 export default function EvidencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { token, loading: authLoading } = useAuth();
   const [packet, setPacket] = useState<EvidencePacket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +73,11 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
   const [selectedFrame, setSelectedFrame] = useState(0);
 
   useEffect(() => {
+    if (!authLoading && !token) router.push("/login");
+  }, [authLoading, token, router]);
+
+  useEffect(() => {
+    if (!token) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -86,7 +95,7 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, token]);
 
   async function handleAction(action: "approved" | "rejected" | "escalated") {
     if (!packet?.violation?.id) return;
@@ -94,8 +103,8 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
     try {
       await updateViolationStatus(packet.violation.id, action);
       setActionDone(action);
-    } catch {
-      // silently fail for demo
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${action} violation`);
     } finally {
       setActionLoading(null);
     }

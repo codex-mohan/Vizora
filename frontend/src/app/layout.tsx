@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/space-grotesk";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "Vizora — Traffic Violation Detection",
@@ -24,7 +25,9 @@ export default function RootLayout({
       lang="en"
       className="dark h-full antialiased"
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

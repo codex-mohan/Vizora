@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   BarChart3,
@@ -31,6 +32,7 @@ import {
   fetchHotspots,
   fetchRepeatOffenders,
 } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { AnalyticsSummary, HeatmapCell, Hotspot, RepeatOffender } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +95,8 @@ function SectionSkeleton({ height = 300 }: { height?: number }) {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
+  const { token, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [offenders, setOffenders] = useState<RepeatOffender[]>([]);
@@ -101,6 +105,11 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!authLoading && !token) router.push("/login");
+  }, [authLoading, token, router]);
+
+  useEffect(() => {
+    if (!token) return;
     let cancelled = false;
     async function load() {
       setLoading(true);

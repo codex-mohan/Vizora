@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   Camera,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { createCamera, fetchCameras } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { CameraInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -192,11 +194,18 @@ function AddCameraForm({ onCreated }: { onCreated: (cam: CameraInfo) => void }) 
 }
 
 export default function CamerasPage() {
+  const router = useRouter();
+  const { token, loading: authLoading } = useAuth();
   const [cameras, setCameras] = useState<CameraInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!authLoading && !token) router.push("/login");
+  }, [authLoading, token, router]);
+
+  useEffect(() => {
+    if (!token) return;
     let cancelled = false;
     async function load() {
       setLoading(true);

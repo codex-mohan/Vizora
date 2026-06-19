@@ -11,9 +11,15 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("vizora_token");
+}
+
 function authHeaders(token?: string): HeadersInit {
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
+  const t = token ?? getStoredToken();
+  if (!t) return {};
+  return { Authorization: `Bearer ${t}` };
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit & { token?: string }): Promise<T> {
@@ -37,18 +43,7 @@ export async function processMedia(file: File, cameraId: string, mode: "still_im
   form.set("file", file);
   form.set("camera_id", cameraId);
   form.set("mode", mode);
-
-  const response = await fetch(`${API_BASE_URL}/api/process`, {
-    method: "POST",
-    body: form,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Process request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as ProcessResult;
+  return apiFetch<ProcessResult>("/api/process", { method: "POST", body: form });
 }
 
 export function realtimeEventsUrl() {
