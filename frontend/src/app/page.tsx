@@ -1,22 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { CTASection } from "@/components/landing/cta-section";
 import { EvidenceSection } from "@/components/landing/evidence-section";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { Footer } from "@/components/landing/footer";
 import { HeroSection } from "@/components/landing/hero-section";
 import { ModelsSection } from "@/components/landing/models-section";
+import { StatsSection } from "@/components/landing/stats-section";
 import { WorkflowSection } from "@/components/landing/workflow-section";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 
+const navItems = [
+  { href: "#features", label: "Features" },
+  { href: "#workflow", label: "How it works" },
+  { href: "#models", label: "Models" },
+  { href: "#evidence", label: "Evidence" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/cameras", label: "Cameras" },
+];
+
 export default function Home() {
+  const [mobileNav, setMobileNav] = useState(false);
+
   return (
-    <main className="min-h-screen bg-[#0a0c0a] text-slate-100">
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0c0a]/80 backdrop-blur-2xl">
+    <main className="min-h-screen bg-[#100f18] text-slate-100">
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#100f18]/80 backdrop-blur-2xl">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="group flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-lg bg-cyan-400/10 text-cyan-400 transition-colors group-hover:bg-cyan-400/15">
+            <div className="grid size-9 place-items-center rounded-lg bg-violet-400/10 text-violet-400 transition-colors group-hover:bg-violet-400/15">
               <ShieldCheck className="size-4.5" />
             </div>
             <span className="font-heading text-lg font-semibold tracking-tight">
@@ -25,14 +38,7 @@ export default function Home() {
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
-            {[
-              { href: "#features", label: "Features" },
-              { href: "#workflow", label: "How it works" },
-              { href: "#models", label: "Models" },
-              { href: "#evidence", label: "Evidence" },
-              { href: "/analytics", label: "Analytics" },
-              { href: "/cameras", label: "Cameras" },
-            ].map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -52,15 +58,46 @@ export default function Home() {
             </Link>
             <Link
               href="/process"
-              className="inline-flex h-9 items-center rounded-lg bg-cyan-400 px-4 text-sm font-medium text-[#0a0c0a] transition-all hover:bg-cyan-300 hover:shadow-[0_8px_24px_rgba(34,211,238,0.2)]"
+              className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
             >
               Process <ArrowRight className="ml-1.5 size-3.5" />
             </Link>
+            <button
+              onClick={() => setMobileNav(!mobileNav)}
+              className="grid size-9 place-items-center rounded-lg transition-colors hover:bg-white/[0.06] md:hidden"
+            >
+              {mobileNav ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
           </div>
         </nav>
+
+        {mobileNav && (
+          <div className="border-t border-white/[0.06] bg-[#100f18]/95 backdrop-blur-2xl md:hidden">
+            <div className="space-y-1 px-5 py-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileNav(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <Link
+                href="/violations"
+                onClick={() => setMobileNav(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+              >
+                Records
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       <HeroSection />
+      <StatsSection />
       <FeaturesSection />
       <WorkflowSection />
       <ModelsSection />

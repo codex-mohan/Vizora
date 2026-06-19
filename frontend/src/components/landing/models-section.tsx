@@ -34,7 +34,7 @@ const recentEvents = [
 ];
 
 const statusColor: Record<string, string> = {
-  approved: "text-emerald-400 bg-emerald-400/10",
+  approved: "text-lime-400 bg-lime-400/10",
   review: "text-amber-400 bg-amber-400/10",
 };
 
@@ -83,7 +83,7 @@ export function ModelsSection() {
                   >
                     <span className="text-slate-500">{m.stage}</span>
                     <span className="font-medium text-white">{m.model}</span>
-                    <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-400">
+                    <span className="rounded-full bg-lime-400/10 px-2 py-0.5 text-xs text-lime-400">
                       {m.status}
                     </span>
                   </div>
@@ -118,7 +118,7 @@ export function ModelsSection() {
                   >
                     <div className={`grid size-8 place-items-center rounded-lg ${statusColor[event.status]?.split(" ")[1]}`}>
                       {event.status === "approved" ? (
-                        <CheckCircle2 className="size-4 text-emerald-400" />
+                        <CheckCircle2 className="size-4 text-lime-400" />
                       ) : (
                         <AlertTriangle className="size-4 text-amber-400" />
                       )}
@@ -135,7 +135,7 @@ export function ModelsSection() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="font-metadata text-xs text-cyan-400">
+                      <span className="font-metadata text-xs text-violet-400">
                         {Math.round(event.confidence * 100)}%
                       </span>
                       <p className="text-[10px] text-slate-600">{event.time}</p>

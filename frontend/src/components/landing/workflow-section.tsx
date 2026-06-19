@@ -96,12 +96,12 @@ export function WorkflowSection() {
                 viewport={{ once: true, margin: "-50px" }}
                 whileInView="visible"
               >
-                <div className="group h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/20 hover:shadow-lg hover:shadow-cyan-400/5 sm:p-6">
+                <div className="group h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/20 hover:shadow-lg hover:shadow-violet-400/5 sm:p-6">
                   <div className="relative mb-5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-white/[0.03] transition-colors duration-300 group-hover:bg-white/[0.05] sm:mb-6">
                     {step.visual === "camera" && (
                       <div className="relative">
                         <div className="rounded-lg border border-white/[0.06] bg-[#111318] p-4 shadow-sm transition-transform duration-300 group-hover:scale-105">
-                          <Camera className="mx-auto size-8 text-cyan-400" />
+                          <Camera className="mx-auto size-8 text-violet-400" />
                           <p className="mt-2 text-center font-metadata text-[10px] text-slate-500">
                             traffic_photo.jpg
                           </p>
@@ -112,10 +112,10 @@ export function WorkflowSection() {
                       <div className="w-full px-6">
                         <div className="mb-2 flex justify-between font-metadata text-[10px] text-slate-500">
                           <span>Quality Score</span>
-                          <span className="text-cyan-400">87%</span>
+                          <span className="text-violet-400">87%</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
-                          <div className="h-full w-[87%] animate-[expandWidth_1.5s_ease-out_0.3s_both] rounded-full bg-cyan-400" />
+                          <div className="h-full w-[87%] animate-[expandWidth_1.5s_ease-out_0.3s_both] rounded-full bg-violet-400" />
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
                           {[
@@ -125,7 +125,7 @@ export function WorkflowSection() {
                           ].map(([label, value]) => (
                             <div key={label} className="rounded bg-white/[0.04] p-1.5 text-center">
                               <p className="font-metadata text-[8px] text-slate-600">{label}</p>
-                              <p className="font-metadata text-[10px] text-emerald-400">{value}</p>
+                              <p className="font-metadata text-[10px] text-lime-400">{value}</p>
                             </div>
                           ))}
                         </div>
@@ -135,8 +135,8 @@ export function WorkflowSection() {
                       <div className="w-full px-4">
                         <div className="relative rounded-lg bg-[#111318] p-3">
                           <div className="h-20 w-full rounded bg-white/[0.04]" />
-                          <div className="absolute left-6 top-5 h-12 w-16 rounded border-2 border-cyan-400/60">
-                            <span className="absolute -top-4 left-0 font-metadata text-[8px] text-cyan-400">car 96%</span>
+                          <div className="absolute left-6 top-5 h-12 w-16 rounded border-2 border-violet-400/60">
+                            <span className="absolute -top-4 left-0 font-metadata text-[8px] text-violet-400">car 96%</span>
                           </div>
                           <div className="absolute left-14 top-8 h-8 w-10 rounded border-2 border-amber-400/60">
                             <span className="absolute -top-4 left-0 font-metadata text-[8px] text-amber-400">rider</span>
@@ -168,7 +168,7 @@ export function WorkflowSection() {
                           ].map(([rule, result]) => (
                             <div key={rule} className="flex items-center justify-between rounded bg-white/[0.04] px-3 py-1.5">
                               <span className="text-[10px] text-slate-400">{rule}</span>
-                              <span className={`font-metadata text-[10px] ${result === "FAIL" ? "text-red-400" : result === "PASS" ? "text-emerald-400" : "text-slate-600"}`}>
+                              <span className={`font-metadata text-[10px] ${result === "FAIL" ? "text-red-400" : result === "PASS" ? "text-lime-400" : "text-slate-600"}`}>
                                 {result}
                               </span>
                             </div>
@@ -178,9 +178,9 @@ export function WorkflowSection() {
                     )}
                     {step.visual === "packet" && (
                       <div className="text-center">
-                        <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 transition-all duration-300 group-hover:bg-emerald-400/15 group-hover:shadow-md">
-                          <CheckCircle2 className="size-4 text-emerald-400" />
-                          <span className="font-metadata text-xs text-emerald-400">Evidence Ready</span>
+                        <div className="inline-flex items-center gap-2 rounded-lg border border-lime-400/20 bg-lime-400/10 px-4 py-2.5 transition-all duration-300 group-hover:bg-lime-400/15 group-hover:shadow-md">
+                          <CheckCircle2 className="size-4 text-lime-400" />
+                          <span className="font-metadata text-xs text-lime-400">Evidence Ready</span>
                         </div>
                         <p className="mt-2 font-metadata text-[10px] text-slate-600">
                           ev-a1b2c3d4...
@@ -193,7 +193,7 @@ export function WorkflowSection() {
                     <span className="rounded-full bg-white/[0.06] px-2 py-0.5 font-metadata text-xs text-slate-400">
                       {step.number}
                     </span>
-                    <Icon className="size-4 text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                    <Icon className="size-4 text-slate-600 group-hover:text-violet-400 transition-colors" />
                   </div>
                   <h3 className="mb-2 text-base font-medium text-white sm:text-lg">
                     {step.title}

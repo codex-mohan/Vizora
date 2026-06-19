@@ -52,7 +52,7 @@ export function FeaturesSection() {
             viewport={{ once: true, margin: "-50px" }}
             whileInView="visible"
           >
-            <div className="group h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/20 hover:shadow-lg hover:shadow-cyan-400/5 sm:p-6">
+            <div className="group h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/20 hover:shadow-lg hover:shadow-violet-400/5 sm:p-6">
               <div className="mb-5 flex items-start justify-between sm:mb-6">
                 <span className="font-metadata text-[10px] uppercase tracking-wider text-slate-500 sm:text-xs">
                   Detection
@@ -64,13 +64,13 @@ export function FeaturesSection() {
               <div className="mb-5 rounded-xl bg-white/[0.03] p-4 transition-colors duration-300 group-hover:bg-white/[0.05] sm:mb-6">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#111318] px-3 py-1.5">
-                    <Camera className="size-4 text-cyan-400" />
+                    <Camera className="size-4 text-violet-400" />
                     <span className="font-metadata text-[10px] text-slate-400">Input</span>
                   </div>
                   <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div className="h-full w-4/5 rounded-full bg-cyan-400 transition-all duration-500 group-hover:w-full" />
+                    <div className="h-full w-4/5 rounded-full bg-violet-400 transition-all duration-500 group-hover:w-full" />
                   </div>
-                  <span className="font-metadata text-xs text-cyan-400">5 objects</span>
+                  <span className="font-metadata text-xs text-violet-400">5 objects</span>
                 </div>
               </div>
               <h3 className="mb-2 text-base font-semibold text-white sm:text-lg">
@@ -145,8 +145,8 @@ export function FeaturesSection() {
                   <div className="flex size-16 items-center justify-center rounded-full border-2 border-violet-400/30 transition-all duration-500 group-hover:border-violet-400/60 group-hover:shadow-lg group-hover:shadow-violet-400/20">
                     <Shield className="size-6 text-violet-400 transition-transform duration-300 group-hover:scale-110" />
                   </div>
-                  <div className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-emerald-400 transition-transform duration-300 group-hover:scale-110">
-                    <CheckCircle2 className="size-3 text-[#0a0c0a]" />
+                  <div className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-lime-400 transition-transform duration-300 group-hover:scale-110">
+                    <CheckCircle2 className="size-3 text-[#100f18]" />
                   </div>
                 </div>
               </div>
@@ -168,11 +168,11 @@ export function FeaturesSection() {
             viewport={{ once: true, margin: "-50px" }}
             whileInView="visible"
           >
-            <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/20 hover:shadow-lg hover:shadow-emerald-400/5 sm:p-6">
+            <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-lime-400/20 hover:shadow-lg hover:shadow-lime-400/5 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
                 <div className="flex shrink-0 items-center justify-center rounded-xl bg-white/[0.03] p-4 transition-colors duration-300 group-hover:bg-white/[0.05] sm:w-auto">
-                  <div className="relative flex size-16 items-center justify-center rounded-full border-2 border-emerald-400/30 transition-all duration-500 group-hover:border-emerald-400/60 sm:size-20">
-                    <RadioTower className="size-6 text-emerald-400 transition-transform duration-300 group-hover:scale-110 sm:size-8" />
+                  <div className="relative flex size-16 items-center justify-center rounded-full border-2 border-lime-400/30 transition-all duration-500 group-hover:border-lime-400/60 sm:size-20">
+                    <RadioTower className="size-6 text-lime-400 transition-transform duration-300 group-hover:scale-110 sm:size-8" />
                   </div>
                 </div>
                 <div className="flex-1">
@@ -222,7 +222,7 @@ export function FeaturesSection() {
                         key={i}
                         style={{ transitionDelay: `${i * 50}ms` }}
                       >
-                        <span className="font-metadata text-sm text-cyan-400">{num}</span>
+                        <span className="font-metadata text-sm text-violet-400">{num}</span>
                       </div>
                     ))}
                   </div>
@@ -239,7 +239,7 @@ export function FeaturesSection() {
           viewport={{ once: true, margin: "-50px" }}
           whileInView="visible"
         >
-          <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/5 sm:p-6">
+          <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:shadow-lg hover:shadow-violet-400/5 sm:p-6">
             <div className="mb-5 flex items-start justify-between sm:mb-6">
               <span className="font-metadata text-[10px] uppercase tracking-wider text-slate-500 sm:text-xs">
                 Violation Coverage
@@ -261,7 +261,7 @@ export function FeaturesSection() {
                   {["Helmet", "Seatbelt", "Triple Ride", "Wrong Side", "Stop Line", "Red Light", "Illegal Parking"].map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-metadata text-[10px] transition-colors duration-300 hover:bg-cyan-400/10 hover:text-cyan-400"
+                      className="rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-metadata text-[10px] transition-colors duration-300 hover:bg-violet-400/10 hover:text-violet-400"
                     >
                       {tag}
                     </span>
@@ -270,7 +270,7 @@ export function FeaturesSection() {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-all duration-300 group-hover:bg-white/[0.05]">
                     <span className="font-metadata text-[10px] text-slate-500">Single-frame</span>
-                    <p className="mt-1 font-metadata text-lg text-cyan-400">2 types</p>
+                    <p className="mt-1 font-metadata text-lg text-violet-400">2 types</p>
                   </div>
                   <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-all duration-300 group-hover:bg-white/[0.05]">
                     <span className="font-metadata text-[10px] text-slate-500">Temporal</span>
@@ -284,8 +284,8 @@ export function FeaturesSection() {
 
               <div className="rounded-xl bg-white/[0.03] p-4 transition-colors duration-300 group-hover:bg-white/[0.05]">
                 <div className="mb-3 flex items-center gap-2">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-cyan-400/10">
-                    <Eye className="size-4 text-cyan-400" />
+                  <div className="flex size-8 items-center justify-center rounded-full bg-violet-400/10">
+                    <Eye className="size-4 text-violet-400" />
                   </div>
                   <span className="font-metadata text-xs text-slate-500">
                     Live Detection Feed
@@ -311,10 +311,10 @@ export function FeaturesSection() {
                 <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-[#111318] p-3">
                   <div>
                     <span className="font-metadata text-[10px] text-slate-500">Review Status</span>
-                    <p className="font-metadata text-xs text-emerald-400">Auto-approved</p>
+                    <p className="font-metadata text-xs text-lime-400">Auto-approved</p>
                   </div>
-                  <div className="flex size-6 items-center justify-center rounded-full bg-emerald-400/20">
-                    <CheckCircle2 className="size-3 text-emerald-400" />
+                  <div className="flex size-6 items-center justify-center rounded-full bg-lime-400/20">
+                    <CheckCircle2 className="size-3 text-lime-400" />
                   </div>
                 </div>
               </div>

@@ -4,8 +4,14 @@ import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vizora",
-  description: "Realtime traffic violation evidence intelligence",
+  title: "Vizora — Traffic Violation Detection",
+  description: "Automated photo identification and classification of traffic violations using computer vision. Process surveillance images, detect 7 violation types, read plates, generate court-ready evidence.",
+  openGraph: {
+    title: "Vizora — Traffic Violation Detection",
+    description: "AI-powered traffic violation detection from surveillance imagery",
+    type: "website",
+    siteName: "Vizora",
+  },
 };
 
 export default function RootLayout({

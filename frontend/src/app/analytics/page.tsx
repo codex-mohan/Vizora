@@ -168,14 +168,14 @@ export default function AnalyticsPage() {
             label="Total Violations"
             value={summary?.total_violations.toLocaleString() ?? "—"}
             icon={BarChart3}
-            tone="text-cyan-200"
+            tone="text-violet-200"
             loading={loading}
           />
           <KpiCard
             label="Violations Today"
             value={summary?.violations_today.toLocaleString() ?? "—"}
             icon={TrendingUp}
-            tone="text-emerald-200"
+            tone="text-lime-200"
             loading={loading}
           />
           <KpiCard
@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
                       }}
                       labelStyle={{ color: "#e2e8f0" }}
                     />
-                    <Bar dataKey="count" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -325,9 +325,9 @@ export default function AnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#22d3ee"
+                    stroke="#8b5cf6"
                     strokeWidth={2}
-                    dot={{ fill: "#22d3ee", r: 3 }}
+                    dot={{ fill: "#8b5cf6", r: 3 }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -369,7 +369,7 @@ export default function AnalyticsPage() {
                         const bg =
                           count === 0
                             ? "bg-white/[0.03]"
-                            : `rgba(34, 211, 238, ${0.1 + intensity * 0.7})`;
+                            : `rgba(139, 92, 246, ${0.1 + intensity * 0.7})`;
                         return (
                           <div
                             key={h}
@@ -404,7 +404,7 @@ export default function AnalyticsPage() {
                     className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="grid size-8 place-items-center rounded-full bg-cyan-300/10 font-metadata text-sm text-cyan-200">
+                      <span className="grid size-8 place-items-center rounded-full bg-violet-300/10 font-metadata text-sm text-violet-200">
                         {i + 1}
                       </span>
                       <div>
@@ -416,7 +416,7 @@ export default function AnalyticsPage() {
                         )}
                       </div>
                     </div>
-                    <span className="font-metadata text-lg text-cyan-200">
+                    <span className="font-metadata text-lg text-violet-200">
                       {loc.violation_count}
                     </span>
                   </div>
@@ -455,7 +455,7 @@ export default function AnalyticsPage() {
                   <TableBody>
                     {offenders.map((o) => (
                       <TableRow key={o.plate_hash} className="border-white/5">
-                        <TableCell className="font-metadata text-cyan-200">
+                        <TableCell className="font-metadata text-violet-200">
                           {o.plate_text}
                         </TableCell>
                         <TableCell className="font-metadata text-amber-200">

@@ -49,29 +49,29 @@ const VIOLATION_TYPES = [
 ] as const;
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
-  HELMET: "border-red-400/30 text-red-200",
-  SEATBELT: "border-orange-400/30 text-orange-200",
-  TRIPLE_RIDE: "border-yellow-400/30 text-yellow-200",
-  WRONG_SIDE: "border-purple-400/30 text-purple-200",
-  STOP_LINE: "border-blue-400/30 text-blue-200",
-  RED_LIGHT: "border-rose-400/30 text-rose-200",
-  ILLEGAL_PARKING: "border-teal-400/30 text-teal-200",
+  HELMET: "text-red-400 bg-red-400/10",
+  SEATBELT: "text-orange-400 bg-orange-400/10",
+  TRIPLE_RIDE: "text-amber-400 bg-amber-400/10",
+  WRONG_SIDE: "text-rose-400 bg-rose-400/10",
+  STOP_LINE: "text-pink-400 bg-pink-400/10",
+  RED_LIGHT: "text-red-500 bg-red-500/10",
+  ILLEGAL_PARKING: "text-yellow-400 bg-yellow-400/10",
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
-  approved: "bg-emerald-300 text-slate-950",
-  pending: "bg-amber-300 text-slate-950",
-  rejected: "bg-red-300 text-slate-950",
-  escalated: "bg-violet-300 text-slate-950",
+  approved: "text-lime-400 bg-lime-400/10",
+  pending: "text-amber-400 bg-amber-400/10",
+  rejected: "text-red-400 bg-red-400/10",
+  escalated: "text-rose-400 bg-rose-400/10",
 };
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
   const color =
     pct >= 90
-      ? "bg-emerald-400"
+      ? "bg-lime-400"
       : pct >= 75
-        ? "bg-cyan-400"
+        ? "bg-violet-400"
         : pct >= 60
           ? "bg-amber-400"
           : "bg-red-400";
@@ -219,7 +219,7 @@ export default function ViolationsPage() {
             </Button>
             <Link
               href="/process"
-              className="inline-flex h-8 cursor-pointer items-center justify-center rounded-lg bg-cyan-300 px-4 text-sm font-medium text-slate-950 transition-colors hover:bg-cyan-200"
+              className="inline-flex h-8 cursor-pointer items-center justify-center rounded-lg bg-violet-300 px-4 text-sm font-medium text-slate-950 transition-colors hover:bg-violet-200"
             >
               Process new <ArrowUpRight className="ml-1 size-3.5" />
             </Link>
@@ -396,7 +396,7 @@ export default function ViolationsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="mt-2 cursor-pointer text-cyan-300"
+                            className="mt-2 cursor-pointer text-violet-300"
                             onClick={clearFilters}
                           >
                             Clear filters
@@ -428,7 +428,7 @@ export default function ViolationsPage() {
                       </TableCell>
                       <TableCell className="text-sm text-slate-300">{v.camera_id}</TableCell>
                       <TableCell className="text-sm text-slate-400">{v.location}</TableCell>
-                      <TableCell className="font-metadata text-sm text-cyan-200">
+                      <TableCell className="font-metadata text-sm text-violet-200">
                         {v.plate ?? "—"}
                       </TableCell>
                       <TableCell>

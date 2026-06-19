@@ -25,13 +25,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
-  HELMET: "border-red-400/30 text-red-200",
-  SEATBELT: "border-orange-400/30 text-orange-200",
-  TRIPLE_RIDE: "border-yellow-400/30 text-yellow-200",
-  WRONG_SIDE: "border-purple-400/30 text-purple-200",
-  STOP_LINE: "border-blue-400/30 text-blue-200",
-  RED_LIGHT: "border-rose-400/30 text-rose-200",
-  ILLEGAL_PARKING: "border-teal-400/30 text-teal-200",
+  HELMET: "text-red-400 bg-red-400/10",
+  SEATBELT: "text-orange-400 bg-orange-400/10",
+  TRIPLE_RIDE: "text-amber-400 bg-amber-400/10",
+  WRONG_SIDE: "text-rose-400 bg-rose-400/10",
+  STOP_LINE: "text-pink-400 bg-pink-400/10",
+  RED_LIGHT: "text-red-500 bg-red-500/10",
+  ILLEGAL_PARKING: "text-yellow-400 bg-yellow-400/10",
 };
 
 function MetadataCell({ label, value }: { label: string; value: React.ReactNode }) {
@@ -158,7 +158,7 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
             <Card className="overflow-hidden border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-heading text-2xl">
-                  <Camera className="size-5 text-cyan-300" /> Annotated Evidence
+                  <Camera className="size-5 text-violet-300" /> Annotated Evidence
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -189,7 +189,7 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                         onClick={() => setSelectedFrame(i)}
                         className={`h-16 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-colors ${
                           i === selectedFrame
-                            ? "border-cyan-300"
+                            ? "border-violet-300"
                             : "border-white/10 hover:border-white/25"
                         }`}
                       >
@@ -299,12 +299,12 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                 <div
                   className={`flex items-center gap-3 rounded-2xl border p-3 ${
                     packet.hash_chain
-                      ? "border-emerald-300/15 bg-emerald-300/[0.06]"
+                      ? "border-lime-300/15 bg-lime-300/[0.06]"
                       : "border-amber-300/15 bg-amber-300/[0.06]"
                   }`}
                 >
                   {packet.hash_chain ? (
-                    <ShieldCheck className="size-5 text-emerald-300" />
+                    <ShieldCheck className="size-5 text-lime-300" />
                   ) : (
                     <ShieldX className="size-5 text-amber-300" />
                   )}
@@ -349,14 +349,14 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                   <div
                     className={`flex items-center gap-3 rounded-2xl border p-3 ${
                       actionDone === "approved"
-                        ? "border-emerald-300/15 bg-emerald-300/[0.06]"
+                        ? "border-lime-300/15 bg-lime-300/[0.06]"
                         : actionDone === "rejected"
                           ? "border-red-300/15 bg-red-300/[0.06]"
                           : "border-violet-300/15 bg-violet-300/[0.06]"
                     }`}
                   >
                     {actionDone === "approved" ? (
-                      <CheckCircle2 className="size-5 text-emerald-300" />
+                      <CheckCircle2 className="size-5 text-lime-300" />
                     ) : actionDone === "rejected" ? (
                       <XCircle className="size-5 text-red-300" />
                     ) : (
@@ -368,7 +368,7 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                   <div className="grid grid-cols-3 gap-2">
                     <Button
                       size="sm"
-                      className="cursor-pointer bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30"
+                      className="cursor-pointer bg-lime-500/20 text-lime-200 hover:bg-lime-500/30"
                       disabled={!!actionLoading}
                       onClick={() => handleAction("approved")}
                     >

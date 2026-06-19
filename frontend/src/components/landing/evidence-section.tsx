@@ -47,7 +47,7 @@ export function EvidenceSection() {
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>Evidence Packet</span>
                   <span className="flex items-center gap-1.5">
-                    <BadgeCheck className="size-3 text-emerald-400" /> Verified
+                    <BadgeCheck className="size-3 text-lime-400" /> Verified
                   </span>
                 </div>
                 <div className="mt-4 rounded-lg bg-white/[0.03] p-4">
@@ -90,7 +90,7 @@ export function EvidenceSection() {
               <div className="space-y-3">
                 <div className="rounded-xl border border-white/[0.06] bg-[#111318] p-4">
                   <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <Shield className="size-3.5 text-cyan-400" />
+                    <Shield className="size-3.5 text-violet-400" />
                     <span>VLM Summary</span>
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -104,8 +104,8 @@ export function EvidenceSection() {
                     <span>Review Status</span>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-emerald-400" />
-                    <span className="text-sm text-emerald-400">Auto-approved</span>
+                    <CheckCircle2 className="size-4 text-lime-400" />
+                    <span className="text-sm text-lime-400">Auto-approved</span>
                     <span className="text-xs text-slate-500">
                       — confidence above threshold
                     </span>

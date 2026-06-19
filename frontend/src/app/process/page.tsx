@@ -29,10 +29,10 @@ function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; image
 
   return (
     <div
-      className="absolute rounded-lg border border-cyan-300/90 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,0.28)]"
+      className="absolute rounded-lg border border-violet-300/90 bg-violet-300/10 shadow-[0_0_28px_rgba(139,92,246,0.28)]"
       style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
     >
-      <span className="absolute -top-7 left-0 rounded-md border border-cyan-300/40 bg-slate-950/90 px-2 py-1 font-metadata text-[10px] uppercase tracking-[0.18em] text-cyan-100 backdrop-blur">
+      <span className="absolute -top-7 left-0 rounded-md border border-violet-300/40 bg-slate-950/90 px-2 py-1 font-metadata text-[10px] uppercase tracking-[0.18em] text-violet-100 backdrop-blur">
         {detection.label} {confidence(detection.confidence)}
       </span>
     </div>
@@ -92,7 +92,7 @@ export default function ProcessPage() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header className="flex flex-col justify-between gap-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/30 backdrop-blur-xl md:flex-row md:items-center">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 font-metadata text-xs uppercase tracking-[0.24em] text-cyan-200">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 font-metadata text-xs uppercase tracking-[0.24em] text-violet-200">
               <ScanLine className="size-3.5" /> Vizora Vision Workbench
             </div>
             <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-white md:text-6xl">
@@ -103,9 +103,9 @@ export default function ProcessPage() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 md:w-[360px]">
-            <Card className="border-cyan-300/15 bg-cyan-300/[0.08]">
+            <Card className="border-violet-300/15 bg-violet-300/[0.08]">
               <CardContent className="p-4">
-                <p className="font-metadata text-xs uppercase tracking-[0.22em] text-cyan-200">Detector</p>
+                <p className="font-metadata text-xs uppercase tracking-[0.22em] text-violet-200">Detector</p>
                 <p className="mt-2 font-heading text-2xl text-white">YOLO11n</p>
               </CardContent>
             </Card>
@@ -122,7 +122,7 @@ export default function ProcessPage() {
           <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-heading text-2xl">
-                <FileImage className="size-5 text-cyan-300" /> Process Evidence
+                <FileImage className="size-5 text-violet-300" /> Process Evidence
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -135,11 +135,11 @@ export default function ProcessPage() {
                 <Input
                   type="file"
                   accept="image/*"
-                  className="h-11 cursor-pointer bg-white/5 file:text-cyan-200"
+                  className="h-11 cursor-pointer bg-white/5 file:text-violet-200"
                   onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
                 />
               </div>
-              <Button disabled={!file || loading} onClick={submit} className="h-12 w-full cursor-pointer bg-cyan-300 text-slate-950 hover:bg-cyan-200">
+              <Button disabled={!file || loading} onClick={submit} className="h-12 w-full cursor-pointer bg-violet-300 text-slate-950 hover:bg-violet-200">
                 {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Activity className="mr-2 size-4" />}
                 Run live inference
               </Button>
@@ -160,7 +160,7 @@ export default function ProcessPage() {
                   </div>
                   <div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Evidence packet</p>
-                    <p className="mt-2 break-all font-metadata text-sm text-cyan-100">{result.evidence_packet_id}</p>
+                    <p className="mt-2 break-all font-metadata text-sm text-violet-100">{result.evidence_packet_id}</p>
                   </div>
                 </div>
               ) : null}
@@ -173,7 +173,7 @@ export default function ProcessPage() {
                 <Camera className="size-5 text-amber-300" /> Annotated Evidence
               </CardTitle>
               {result ? (
-                <Badge className={result.review_required ? "bg-amber-300 text-slate-950" : "bg-emerald-300 text-slate-950"}>
+                <Badge className={result.review_required ? "bg-amber-300 text-slate-950" : "bg-lime-300 text-slate-950"}>
                   {result.review_required ? "Review required" : "Auto clear"}
                 </Badge>
               ) : null}
@@ -213,7 +213,7 @@ export default function ProcessPage() {
                         <div key={detection.id} className="rounded-2xl border border-white/10 bg-black/20 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium capitalize">{detection.label}</span>
-                            <span className="font-metadata text-xs text-cyan-200">{confidence(detection.confidence)}</span>
+                            <span className="font-metadata text-xs text-violet-200">{confidence(detection.confidence)}</span>
                           </div>
                           <p className="mt-2 font-metadata text-xs text-slate-500">
                             {Math.round(detection.bbox.x1)}, {Math.round(detection.bbox.y1)} → {Math.round(detection.bbox.x2)}, {Math.round(detection.bbox.y2)}

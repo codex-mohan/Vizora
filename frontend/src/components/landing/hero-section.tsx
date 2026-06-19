@@ -6,13 +6,14 @@ import Link from "next/link";
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden">
+      <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
       <div className="mx-auto max-w-7xl px-5 pb-10 pt-10 sm:px-8 sm:pt-14">
         <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-2">
           <div className="space-y-6 animate-[fadeInUp_0.8s_ease-out_both]">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-metadata text-xs text-slate-400">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-400" />
               </span>
               <span>Automated Photo Enforcement System</span>
             </div>
@@ -30,7 +31,7 @@ export function HeroSection() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/process"
-                className="group inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-400 px-6 text-sm font-medium text-[#0a0c0a] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-300 hover:shadow-[0_8px_24px_rgba(34,211,238,0.2)]"
+                className="group inline-flex h-11 items-center gap-2 rounded-lg bg-violet-400 px-6 text-sm font-medium text-[#100f18] transition-all duration-300 hover:-translate-y-0.5 hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
               >
                 Process evidence
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -48,7 +49,7 @@ export function HeroSection() {
             <div className="relative rounded-2xl border border-white/[0.06] bg-[#111318] p-6">
               <div className="mb-4 flex justify-between font-metadata text-[10px] text-slate-500">
                 <span>Evidence Packet — Live</span>
-                <span className="flex items-center gap-1.5"><BadgeCheck className="size-3 text-emerald-400" /> Verified</span>
+                <span className="flex items-center gap-1.5"><BadgeCheck className="size-3 text-lime-400" /> Verified</span>
               </div>
 
               <div className="absolute top-20 -left-4 w-40 -rotate-2 animate-[float_6s_ease-in-out_infinite] rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3 shadow-lg transition-transform duration-500 hover:rotate-0 hover:scale-105">
@@ -77,17 +78,17 @@ export function HeroSection() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] text-slate-400">motorcycle</span>
-                      <span className="text-[8px] text-cyan-400">96%</span>
+                      <span className="text-[8px] text-violet-400">96%</span>
                     </div>
                     <div className="h-1 w-full overflow-hidden rounded-full bg-[#1a1d1a]">
-                      <div className="h-full w-[96%] animate-[expandWidth_1.5s_ease-out_0.5s_both] rounded-full bg-cyan-400" />
+                      <div className="h-full w-[96%] animate-[expandWidth_1.5s_ease-out_0.5s_both] rounded-full bg-violet-400" />
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] text-slate-400">rider</span>
-                      <span className="text-[8px] text-cyan-400">94%</span>
+                      <span className="text-[8px] text-violet-400">94%</span>
                     </div>
                     <div className="h-1 w-full overflow-hidden rounded-full bg-[#1a1d1a]">
-                      <div className="h-full w-[94%] animate-[expandWidth_1.5s_ease-out_0.7s_both] rounded-full bg-cyan-400" />
+                      <div className="h-full w-[94%] animate-[expandWidth_1.5s_ease-out_0.7s_both] rounded-full bg-violet-400" />
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] text-slate-400">plate OCR</span>
@@ -103,9 +104,9 @@ export function HeroSection() {
               <div className="absolute top-32 -right-2 animate-[float_6s_ease-in-out_1s_infinite] space-y-2">
                 <div className="max-w-48 rounded-xl border border-white/[0.06] bg-[#111318] p-3 shadow-lg transition-transform duration-300 hover:scale-105">
                   <div className="mb-2 flex items-center gap-2">
-                    <div className="size-6 rounded-full bg-cyan-400/20" />
+                    <div className="size-6 rounded-full bg-violet-400/20" />
                     <span className="text-xs font-medium text-white">VLM Summary</span>
-                    <span className="rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[8px] font-medium text-emerald-400">
+                    <span className="rounded-full bg-lime-400/10 px-1.5 py-0.5 text-[8px] font-medium text-lime-400">
                       Ready
                     </span>
                   </div>
@@ -118,7 +119,7 @@ export function HeroSection() {
                   <p className="font-metadata text-[10px] text-slate-500">
                     SHA-256:a1b2c3d4...
                   </p>
-                  <p className="mt-1 text-[10px] text-emerald-400">Tamper-evident</p>
+                  <p className="mt-1 text-[10px] text-lime-400">Tamper-evident</p>
                 </div>
               </div>
             </div>

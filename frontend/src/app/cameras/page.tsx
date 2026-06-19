@@ -30,11 +30,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 const MODE_BADGE_CLASS: Record<string, string> = {
-  CLEAN: "bg-emerald-300 text-slate-950",
-  LOWLIGHT: "bg-amber-300 text-slate-950",
-  HAZE: "bg-orange-300 text-slate-950",
-  RAIN: "bg-blue-300 text-slate-950",
-  MULTI: "bg-purple-300 text-slate-950",
+  CLEAN: "text-lime-400 bg-lime-400/10",
+  LOWLIGHT: "text-amber-400 bg-amber-400/10",
+  HAZE: "text-orange-400 bg-orange-400/10",
+  RAIN: "text-blue-400 bg-blue-400/10",
+  MULTI: "text-violet-400 bg-violet-400/10",
 };
 
 function CameraCardSkeleton() {
@@ -97,7 +97,7 @@ function AddCameraForm({ onCreated }: { onCreated: (cam: CameraInfo) => void }) 
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button className="cursor-pointer bg-cyan-300 text-slate-950 hover:bg-cyan-200">
+          <Button className="cursor-pointer bg-violet-300 text-slate-950 hover:bg-violet-200">
             <Plus className="mr-1.5 size-3.5" /> Add Camera
           </Button>
         }
@@ -179,7 +179,7 @@ function AddCameraForm({ onCreated }: { onCreated: (cam: CameraInfo) => void }) 
             <Button
               type="submit"
               disabled={!name.trim() || loading}
-              className="cursor-pointer bg-cyan-300 text-slate-950 hover:bg-cyan-200"
+              className="cursor-pointer bg-violet-300 text-slate-950 hover:bg-violet-200"
             >
               {loading ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
               Create
@@ -262,19 +262,19 @@ export default function CamerasPage() {
             {cameras.map((cam) => (
               <Card
                 key={cam.id}
-                className="group border-white/10 bg-slate-950/55 shadow-xl shadow-black/20 backdrop-blur-xl transition-colors hover:border-cyan-300/20"
+                className="group border-white/10 bg-slate-950/55 shadow-xl shadow-black/20 backdrop-blur-xl transition-colors hover:border-violet-300/20"
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div className="flex items-center gap-3">
                     <div
                       className={`grid size-10 place-items-center rounded-full ${
                         cam.status === "online"
-                          ? "bg-emerald-300/10"
+                          ? "bg-lime-300/10"
                           : "bg-red-300/10"
                       }`}
                     >
                       {cam.status === "online" ? (
-                        <Wifi className="size-5 text-emerald-300" />
+                        <Wifi className="size-5 text-lime-300" />
                       ) : (
                         <WifiOff className="size-5 text-red-300" />
                       )}
@@ -312,7 +312,7 @@ export default function CamerasPage() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`size-2 rounded-full ${
-                          cam.status === "online" ? "bg-emerald-400" : "bg-red-400"
+                          cam.status === "online" ? "bg-lime-400" : "bg-red-400"
                         }`}
                       />
                       <span className="font-metadata text-sm capitalize text-slate-300">
