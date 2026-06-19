@@ -1,0 +1,136 @@
+active_profile: mvp
+
+profiles:
+  mvp:
+    name: mvp
+    detector:
+      choice: yolo11n
+      runtime: pytorch
+      weights: models/detect/yolo11n.pt
+      confidence_threshold: 0.35
+      iou_threshold: 0.6
+    tracker:
+      choice: byte_track_v2
+      runtime: pytorch
+      max_lost_frames: 30
+      association_threshold: 0.5
+    pose:
+      choice: rtmo_m
+      runtime: pytorch
+      weights: models/pose/rtmo_m.pth
+      confidence_threshold: 0.4
+    helmet_classifier:
+      choice: efficientnetv2_s
+      runtime: pytorch
+      weights: models/classify/helmet_effnetv2_s.pth
+      confidence_threshold: 0.55
+    seatbelt_classifier:
+      choice: efficientnetv2_s
+      runtime: pytorch
+      weights: models/classify/seatbelt_effnetv2_s.pth
+      confidence_threshold: 0.6
+    plate_detector:
+      choice: yolo11_plate
+      runtime: pytorch
+      weights: models/anpr/yolo11_plate.pt
+      confidence_threshold: 0.35
+    ocr:
+      primary: paddleocr_pp_ocrv5
+      fallback: parseq
+      accept_threshold: 0.7
+      review_threshold: 0.6
+      primary_runtime: pytorch
+      fallback_runtime: pytorch
+    vlm:
+      choice: qwen2_5_vl_3b
+      runtime: huggingface
+      weights: models/vlm/qwen2_5_vl_3b
+      max_tokens: 512
+      temperature: 0.1
+    preprocessing:
+      budget_ms: 15
+      lowlight_model: disabled
+      haze_model: disabled
+      rain_model: disabled
+      crop_super_resolution: real_esrgan
+
+  accuracy:
+    name: accuracy
+    detector:
+      choice: dfine_l
+      runtime: pytorch
+      weights: models/detect/dfine_l.pth
+      confidence_threshold: 0.3
+      iou_threshold: 0.6
+    tracker:
+      choice: byte_track_v2
+      runtime: pytorch
+    pose:
+      choice: rtmo_m
+      runtime: pytorch
+      weights: models/pose/rtmo_m.pth
+    helmet_classifier:
+      choice: efficientnetv2_s
+      runtime: pytorch
+    seatbelt_classifier:
+      choice: efficientnetv2_s
+      runtime: pytorch
+    plate_detector:
+      choice: yolo11_plate
+      runtime: pytorch
+    ocr:
+      primary: paddleocr_pp_ocrv5
+      fallback: parseq
+      accept_threshold: 0.72
+      review_threshold: 0.6
+    vlm:
+      choice: qwen3_5_vl
+      runtime: external_api
+      endpoint_url: http://localhost:8080/v1/chat/completions
+      max_tokens: 768
+      temperature: 0.1
+    preprocessing:
+      budget_ms: 15
+      lowlight_model: zero_dce_plus_plus
+      haze_model: disabled
+      rain_model: disabled
+      crop_super_resolution: real_esrgan
+
+  review:
+    name: review
+    detector:
+      choice: yolo11x
+      runtime: pytorch
+      confidence_threshold: 0.25
+    tracker:
+      choice: byte_track_v2
+      runtime: pytorch
+    pose:
+      choice: rtmo_m
+      runtime: pytorch
+    helmet_classifier:
+      choice: convnextv2_base
+      runtime: pytorch
+    seatbelt_classifier:
+      choice: convnextv2_base
+      runtime: pytorch
+    plate_detector:
+      choice: yolo11_plate
+      runtime: pytorch
+    ocr:
+      primary: paddleocr_pp_ocrv5
+      fallback: parseq
+      accept_threshold: 0.7
+      review_threshold: 0.5
+    vlm:
+      choice: qwen2_5_vl_7b
+      runtime: huggingface
+      weights: models/vlm/qwen2_5_vl_7b
+      max_tokens: 1024
+      temperature: 0.1
+    preprocessing:
+      budget_ms: 30
+      lowlight_model: zero_dce_plus_plus
+      haze_model: disabled
+      rain_model: disabled
+      crop_super_resolution: real_esrgan

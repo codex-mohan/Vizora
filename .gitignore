@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+.npm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Model weights & data (large files)
+backend/models/**/*.onnx
+backend/models/**/*.pt
+backend/models/**/*.pth
+backend/models/**/*.engine
+backend/models/**/*.bin
+backend/models/**/*.safetensors
+backend/*.pt
+backend/*.pth
+data/samples/*
+!data/samples/.gitkeep
+data/annotations/*
+!data/annotations/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker/data/

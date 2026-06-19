@@ -1,0 +1,35 @@
+cameras:
+  demo-camera:
+    camera_id: demo-camera
+    location_name: MG Road Demo Junction
+    latitude: 12.9756
+    longitude: 77.6068
+    stop_lines:
+      - id: stop-line-main
+        label: Main stop line
+        points:
+          - { x: 120, y: 420 }
+          - { x: 680, y: 420 }
+          - { x: 680, y: 455 }
+          - { x: 120, y: 455 }
+    no_parking_zones:
+      - id: curb-zone
+        label: No parking curb
+        points:
+          - { x: 40, y: 250 }
+          - { x: 180, y: 250 }
+          - { x: 180, y: 720 }
+          - { x: 40, y: 720 }
+    lane_directions:
+      - id: lane-eastbound
+        start: { x: 120, y: 600 }
+        end: { x: 700, y: 420 }
+    signal:
+      signal_roi:
+        id: signal-roi
+        label: Traffic signal crop
+        points:
+          - { x: 710, y: 60 }
+          - { x: 780, y: 60 }
+          - { x: 780, y: 180 }
+          - { x: 710, y: 180 }
