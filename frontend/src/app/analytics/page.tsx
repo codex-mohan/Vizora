@@ -1,72 +1,207 @@
-import { BarChart3, TrendingUp, Users, MapPin } from "lucide-react";
+"use client";
 
+import React, { useEffect, useState } from "react";
+import { format } from "date-fns";
+import {
+  BarChart3,
+  Camera,
+  CheckCircle2,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import {
+  fetchAnalyticsSummary,
+  fetchDayHourHeatmap,
+  fetchHotspots,
+  fetchRepeatOffenders,
+} from "@/lib/api";
+import type { AnalyticsSummary, HeatmapCell, Hotspot, RepeatOffender } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-const violationTypeData = [
-  { type: "Helmet", count: 45, color: "bg-red-400" },
-  { type: "Triple Ride", count: 23, color: "bg-yellow-400" },
-  { type: "Red Light", count: 18, color: "bg-rose-400" },
-  { type: "Seatbelt", count: 15, color: "bg-orange-400" },
-  { type: "Stop Line", count: 12, color: "bg-blue-400" },
-  { type: "Illegal Parking", count: 9, color: "bg-teal-400" },
-  { type: "Wrong Side", count: 6, color: "bg-purple-400" },
+const PIE_COLORS = [
+  "#f87171",
+  "#fb923c",
+  "#facc15",
+  "#a78bfa",
+  "#38bdf8",
+  "#2dd4bf",
+  "#e879f9",
 ];
 
-const hourlyData = [
-  { hour: "6AM", count: 2 }, { hour: "7AM", count: 5 }, { hour: "8AM", count: 12 },
-  { hour: "9AM", count: 18 }, { hour: "10AM", count: 14 }, { hour: "11AM", count: 10 },
-  { hour: "12PM", count: 8 }, { hour: "1PM", count: 6 }, { hour: "2PM", count: 9 },
-  { hour: "3PM", count: 11 }, { hour: "4PM", count: 15 }, { hour: "5PM", count: 20 },
-  { hour: "6PM", count: 22 }, { hour: "7PM", count: 16 }, { hour: "8PM", count: 10 },
-];
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const hotspotLocations = [
-  { name: "MG Road Junction", violations: 34, lat: 12.9756, lng: 77.6068 },
-  { name: "NH-48 Toll Plaza", violations: 28, lat: 12.9100, lng: 77.6400 },
-  { name: "Signal 12 Cross", violations: 22, lat: 12.9500, lng: 77.6200 },
-  { name: "College Road", violations: 19, lat: 12.9300, lng: 77.6100 },
-  { name: "Market Road", violations: 15, lat: 12.9200, lng: 77.6300 },
-];
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  loading,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: string;
+  loading: boolean;
+}) {
+  return (
+    <Card className="border-white/10 bg-slate-950/55 shadow-xl shadow-black/20 backdrop-blur-xl">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between">
+          <p className="font-metadata text-xs uppercase tracking-[0.22em] text-slate-500">
+            {label}
+          </p>
+          <Icon className={`size-4 ${tone}`} />
+        </div>
+        {loading ? (
+          <Skeleton className="mt-3 h-10 w-20" />
+        ) : (
+          <p className={`mt-3 font-heading text-4xl ${tone}`}>{value}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
-const repeatOffenders = [
-  { plate: "KA01AB1234", count: 5, lastSeen: "2026-06-18 17:42:11" },
-  { plate: "MH12CD5678", count: 3, lastSeen: "2026-06-18 17:38:05" },
-  { plate: "DL03EF9012", count: 3, lastSeen: "2026-06-18 17:35:22" },
-  { plate: "TN07GH3456", count: 2, lastSeen: "2026-06-18 17:30:14" },
-];
-
-const maxHourly = Math.max(...hourlyData.map(d => d.count));
-const maxType = Math.max(...violationTypeData.map(d => d.count));
+function SectionSkeleton({ height = 300 }: { height?: number }) {
+  return <Skeleton className="w-full" style={{ height }} />;
+}
 
 export default function AnalyticsPage() {
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [offenders, setOffenders] = useState<RepeatOffender[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [s, h, o, hm] = await Promise.all([
+          fetchAnalyticsSummary(),
+          fetchHotspots(10),
+          fetchRepeatOffenders(10),
+          fetchDayHourHeatmap(),
+        ]);
+        if (!cancelled) {
+          setSummary(s);
+          setHotspots(h);
+          setOffenders(o);
+          setHeatmap(hm);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load analytics");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const typeData = summary
+    ? Object.entries(summary.by_type).map(([name, value]) => ({ name: name.replace(/_/g, " "), value }))
+    : [];
+
+  const hourData = summary
+    ? Array.from({ length: 24 }, (_, i) => ({
+        hour: `${i}:00`,
+        count: summary.by_hour[String(i)] ?? 0,
+      }))
+    : [];
+
+  const trendData = summary?.trend ?? [];
+
+  const maxHeatmap = Math.max(...heatmap.map((c) => c.count), 1);
+
   return (
     <main className="min-h-screen px-5 py-6 text-slate-100 sm:px-8 lg:px-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header>
-          <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-white">Analytics</h1>
-          <p className="mt-2 text-slate-400">Violation trends, hotspots, and repeat offenders.</p>
+          <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-white">
+            Analytics
+          </h1>
+          <p className="mt-2 text-slate-400">
+            Violation trends, hotspots, and repeat offenders.
+          </p>
         </header>
 
+        {error && (
+          <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Total Violations", value: "128", icon: BarChart3, tone: "text-cyan-200" },
-            { label: "Active Cameras", value: "7", icon: MapPin, tone: "text-emerald-200" },
-            { label: "Avg Confidence", value: "87%", icon: TrendingUp, tone: "text-amber-200" },
-            { label: "Repeat Offenders", value: "12", icon: Users, tone: "text-violet-200" },
-          ].map((metric) => {
-            const Icon = metric.icon;
-            return (
-              <Card key={metric.label} className="border-white/10 bg-slate-950/55 shadow-xl shadow-black/20 backdrop-blur-xl">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="font-metadata text-xs uppercase tracking-[0.22em] text-slate-500">{metric.label}</p>
-                    <Icon className={`size-4 ${metric.tone}`} />
-                  </div>
-                  <p className={`mt-3 font-heading text-4xl ${metric.tone}`}>{metric.value}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <KpiCard
+            label="Total Violations"
+            value={summary?.total_violations.toLocaleString() ?? "—"}
+            icon={BarChart3}
+            tone="text-cyan-200"
+            loading={loading}
+          />
+          <KpiCard
+            label="Violations Today"
+            value={summary?.violations_today.toLocaleString() ?? "—"}
+            icon={TrendingUp}
+            tone="text-emerald-200"
+            loading={loading}
+          />
+          <KpiCard
+            label="Avg Confidence"
+            value={summary ? `${Math.round(summary.avg_confidence * 100)}%` : "—"}
+            icon={CheckCircle2}
+            tone="text-amber-200"
+            loading={loading}
+          />
+          <KpiCard
+            label="Active Cameras"
+            value={summary?.active_cameras ?? "—"}
+            icon={Camera}
+            tone="text-violet-200"
+            loading={loading}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <KpiCard
+            label="Review Queue"
+            value={summary?.review_queue_depth ?? "—"}
+            icon={AlertTriangle}
+            tone="text-rose-200"
+            loading={loading}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -74,35 +209,185 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle className="font-heading text-2xl">Violations by Type</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {violationTypeData.map((item) => (
-                <div key={item.type} className="flex items-center gap-3">
-                  <span className="w-24 text-sm text-slate-400">{item.type}</span>
-                  <div className="flex-1 overflow-hidden rounded-full bg-white/5">
-                    <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${(item.count / maxType) * 100}%` }} />
-                  </div>
-                  <span className="w-8 text-right font-metadata text-sm text-slate-300">{item.count}</span>
-                </div>
-              ))}
+            <CardContent>
+              {loading ? (
+                <SectionSkeleton />
+              ) : typeData.length ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={typeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {typeData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      labelStyle={{ color: "#e2e8f0" }}
+                    />
+                    <Legend
+                      formatter={(value: string) => (
+                        <span className="text-xs text-slate-300">{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="py-12 text-center text-sm text-slate-500">No data available.</p>
+              )}
             </CardContent>
           </Card>
 
           <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
             <CardHeader>
-              <CardTitle className="font-heading text-2xl">Time of Day Trend</CardTitle>
+              <CardTitle className="font-heading text-2xl">Time of Day</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-1.5" style={{ height: 200 }}>
-                {hourlyData.map((item) => (
-                  <div key={item.hour} className="flex flex-1 flex-col items-center gap-1">
-                    <div className="w-full rounded-t-lg bg-cyan-400/80" style={{ height: `${(item.count / maxHourly) * 100}%` }} />
-                    <span className="font-metadata text-[9px] text-slate-600">{item.hour}</span>
-                  </div>
-                ))}
-              </div>
+              {loading ? (
+                <SectionSkeleton />
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={hourData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={2}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      labelStyle={{ color: "#e2e8f0" }}
+                    />
+                    <Bar dataKey="count" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="font-heading text-2xl">Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <SectionSkeleton height={240} />
+            ) : trendData.length ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: "#64748b" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "#64748b" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: "#e2e8f0" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#22d3ee"
+                    strokeWidth={2}
+                    dot={{ fill: "#22d3ee", r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-12 text-center text-sm text-slate-500">No trend data available.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="font-heading text-2xl">Day × Hour Heatmap</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <SectionSkeleton height={260} />
+            ) : heatmap.length ? (
+              <div className="overflow-x-auto">
+                <div className="inline-grid gap-1" style={{ gridTemplateColumns: `auto repeat(24, minmax(28px, 1fr))` }}>
+                  <div />
+                  {Array.from({ length: 24 }).map((_, h) => (
+                    <div
+                      key={h}
+                      className="text-center font-metadata text-[9px] text-slate-600"
+                    >
+                      {h}
+                    </div>
+                  ))}
+                  {DAY_LABELS.map((day, d) => (
+                    <React.Fragment key={d}>
+                      <div className="flex items-center pr-2 font-metadata text-xs text-slate-500">
+                        {day}
+                      </div>
+                      {Array.from({ length: 24 }).map((_, h) => {
+                        const cell = heatmap.find((c) => c.day === d && c.hour === h);
+                        const count = cell?.count ?? 0;
+                        const intensity = count / maxHeatmap;
+                        const bg =
+                          count === 0
+                            ? "bg-white/[0.03]"
+                            : `rgba(34, 211, 238, ${0.1 + intensity * 0.7})`;
+                        return (
+                          <div
+                            key={h}
+                            className="aspect-square rounded-sm transition-colors"
+                            style={{ backgroundColor: bg }}
+                            title={`${day} ${h}:00 — ${count} violations`}
+                          />
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="py-12 text-center text-sm text-slate-500">No heatmap data available.</p>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
@@ -110,18 +395,35 @@ export default function AnalyticsPage() {
               <CardTitle className="font-heading text-2xl">Hotspot Locations</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {hotspotLocations.map((loc, i) => (
-                <div key={loc.name} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-8 place-items-center rounded-full bg-cyan-300/10 font-metadata text-sm text-cyan-200">{i + 1}</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">{loc.name}</p>
-                      <p className="font-metadata text-xs text-slate-500">{loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}</p>
+              {loading ? (
+                <SectionSkeleton height={200} />
+              ) : hotspots.length ? (
+                hotspots.map((loc, i) => (
+                  <div
+                    key={loc.location_name}
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-8 place-items-center rounded-full bg-cyan-300/10 font-metadata text-sm text-cyan-200">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-white">{loc.location_name}</p>
+                        {loc.latitude != null && loc.longitude != null && (
+                          <p className="font-metadata text-xs text-slate-500">
+                            {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                    <span className="font-metadata text-lg text-cyan-200">
+                      {loc.violation_count}
+                    </span>
                   </div>
-                  <span className="font-metadata text-lg text-cyan-200">{loc.violations}</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">No hotspot data.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -130,26 +432,60 @@ export default function AnalyticsPage() {
               <CardTitle className="font-heading text-2xl">Repeat Offenders</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10 text-left">
-                      <th className="pb-3 font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Plate</th>
-                      <th className="pb-3 font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Count</th>
-                      <th className="pb-3 font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Last Seen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {repeatOffenders.map((offender) => (
-                      <tr key={offender.plate} className="border-b border-white/5">
-                        <td className="py-3 font-metadata text-cyan-200">{offender.plate}</td>
-                        <td className="py-3 font-metadata text-amber-200">{offender.count}</td>
-                        <td className="py-3 font-metadata text-slate-500">{offender.lastSeen}</td>
-                      </tr>
+              {loading ? (
+                <SectionSkeleton height={200} />
+              ) : offenders.length ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 hover:bg-transparent">
+                      <TableHead className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Plate
+                      </TableHead>
+                      <TableHead className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Count
+                      </TableHead>
+                      <TableHead className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Last Seen
+                      </TableHead>
+                      <TableHead className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Types
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {offenders.map((o) => (
+                      <TableRow key={o.plate_hash} className="border-white/5">
+                        <TableCell className="font-metadata text-cyan-200">
+                          {o.plate_text}
+                        </TableCell>
+                        <TableCell className="font-metadata text-amber-200">
+                          {o.violation_count}
+                        </TableCell>
+                        <TableCell className="font-metadata text-xs text-slate-500">
+                          {o.last_seen_at
+                            ? format(new Date(o.last_seen_at), "MMM d, HH:mm")
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {o.violation_types.slice(0, 3).map((t) => (
+                              <Badge
+                                key={t}
+                                variant="outline"
+                                className="border-white/15 text-[10px] text-slate-400"
+                              >
+                                {t.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">No repeat offenders.</p>
+              )}
             </CardContent>
           </Card>
         </div>
