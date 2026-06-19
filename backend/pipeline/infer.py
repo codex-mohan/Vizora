@@ -97,4 +97,17 @@ class InferencePipeline:
         if description:
             result = result.model_copy(update={"description": description})
 
+        try:
+            from pipeline.evidence.annotator import annotate_evidence
+
+            annotated_bytes = annotate_evidence(
+                media.data,
+                result,
+                face_blur=self.settings.face_blur,
+                plate_redact=self.settings.plate_redact_public,
+            )
+            evidence.annotated_image_bytes = annotated_bytes
+        except Exception:
+            pass
+
         return result

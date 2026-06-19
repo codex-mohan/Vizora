@@ -20,6 +20,7 @@ class EvidencePacket(BaseModel):
     metadata_hash: str
     chain_hash: str
     public_redacted: bool = True
+    annotated_image_bytes: bytes | None = Field(default=None, repr=False)
 
 
 class EvidencePacketBuilder:
