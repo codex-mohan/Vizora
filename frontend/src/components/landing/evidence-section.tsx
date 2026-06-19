@@ -58,7 +58,7 @@ export function EvidenceSection() {
                     Helmet non-compliance
                   </h3>
                   <p className="mt-1 text-sm text-slate-400">
-                    Motorcycle rider detected without helmet. Pose estimation confirms head-region exposure.
+                    A no-helmet headwear box was detected on a motorcycle rider with high confidence.
                   </p>
                   <div className="mt-4 grid grid-cols-3 gap-2">
                     {[
@@ -124,7 +124,7 @@ export function EvidenceSection() {
                     </div>
                     <div>
                       <span className="text-slate-500">Profile:</span>{" "}
-                      <span className="font-metadata text-slate-300">mvp</span>
+                      <span className="font-metadata text-slate-300">fast</span>
                     </div>
                     <div>
                       <span className="text-slate-500">Mode:</span>{" "}

@@ -58,7 +58,7 @@ export function FeaturesSection() {
                   Detection
                 </span>
                 <span className="font-metadata text-[10px] uppercase tracking-wider text-slate-500 sm:text-xs">
-                  YOLO11n
+                  YOLO11s
                 </span>
               </div>
               <div className="mb-5 rounded-xl bg-white/[0.03] p-4 transition-colors duration-300 group-hover:bg-white/[0.05] sm:mb-6">
@@ -77,7 +77,7 @@ export function FeaturesSection() {
                 Vehicle & Road User Detection
               </h3>
               <p className="text-sm text-slate-400">
-                YOLO11 localizes vehicles, riders, pedestrians, and plates. COCO classes mapped to traffic-specific categories.
+                YOLO11 localizes vehicles, riders, pedestrians, plates, and headwear classes with bounding boxes and confidence scores.
               </p>
             </div>
           </motion.div>
@@ -211,7 +211,7 @@ export function FeaturesSection() {
                     Pydantic Model Registry
                   </h3>
                   <p className="text-sm text-slate-400">
-                    Switch between MVP, accuracy, edge, and review profiles. YOLO11, D-FINE-L, Qwen-VL, EfficientNetV2 — all configurable via YAML.
+                    Switch between fast, accuracy, and review profiles. YOLO11s handles fast detection; RT-DETRv2 powers the accuracy profile.
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center justify-center rounded-xl bg-white/[0.03] p-4 transition-colors duration-300 group-hover:bg-white/[0.05] sm:w-auto">

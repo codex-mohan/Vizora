@@ -19,14 +19,14 @@ export function CTASection() {
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
-            href="/process"
+            href="/dashboard"
             className="animate-pulse-glow group inline-flex h-11 items-center justify-center rounded-lg bg-violet-400 px-6 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
           >
             Process evidence
             <ArrowRight className="ml-2 size-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
           <Link
-            href="/analytics"
+            href="/dashboard"
             className="inline-flex h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-6 text-sm font-medium transition-colors hover:bg-white/[0.06]"
           >
             View analytics

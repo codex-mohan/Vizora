@@ -41,7 +41,7 @@ const steps = [
   {
     number: "04",
     title: "Classify",
-    description: "EfficientNetV2-S classifies helmet/seatbelt. PaddleOCR extracts plate text. RTMO estimates pose.",
+    description: "Detector heads localize helmet/headwear and seatbelt evidence with boxes and confidence scores. PaddleOCR extracts plate text.",
     icon: Fingerprint,
     visual: "classify",
   },

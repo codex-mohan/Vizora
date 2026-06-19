@@ -18,8 +18,7 @@ const navItems = [
   { href: "#workflow", label: "How it works" },
   { href: "#models", label: "Models" },
   { href: "#evidence", label: "Evidence" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/cameras", label: "Cameras" },
+  { href: "/dashboard", label: "Dashboard" },
 ];
 
 export default function Home() {
@@ -55,10 +54,10 @@ export default function Home() {
             {loading ? null : user ? (
               <>
                 <Link
-                  href="/process"
+                  href="/dashboard"
                   className="inline-flex h-9 items-center rounded-lg bg-violet-400 px-4 text-sm font-medium text-[#100f18] transition-all hover:bg-violet-300 hover:shadow-[0_8px_24px_rgba(167,139,250,0.2)]"
                 >
-                  Process <ArrowRight className="ml-1.5 size-3.5" />
+                  Dashboard <ArrowRight className="ml-1.5 size-3.5" />
                 </Link>
                 <button onClick={logout} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:text-white">Sign out</button>
               </>
@@ -92,11 +91,11 @@ export default function Home() {
               ))}
               {user ? (
                 <Link
-                  href="/violations"
+                  href="/dashboard"
                   onClick={() => setMobileNav(false)}
                   className="block rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                 >
-                  Records
+                  Dashboard
                 </Link>
               ) : (
                 <>

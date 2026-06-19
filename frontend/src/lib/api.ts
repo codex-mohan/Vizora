@@ -118,7 +118,7 @@ export async function fetchRepeatOffenders(limit?: number, token?: string): Prom
 }
 
 export async function fetchDayHourHeatmap(token?: string): Promise<HeatmapCell[]> {
-  return apiFetch<HeatmapCell[]>("/api/analytics/heatmap", { token });
+  return apiFetch<HeatmapCell[]>("/api/analytics/day-hour-heatmap", { token });
 }
 
 export async function fetchCameras(token?: string): Promise<CameraInfo[]> {

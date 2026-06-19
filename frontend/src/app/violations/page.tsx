@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArrowUpRight,
@@ -140,6 +140,7 @@ function exportCsv(items: ViolationListItem[]) {
 
 export default function ViolationsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { token, loading: authLoading } = useAuth();
   const [data, setData] = useState<ViolationListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +153,7 @@ export default function ViolationsPage() {
   const [minConfidence, setMinConfidence] = useState<string>("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [reviewOnly, setReviewOnly] = useState(false);
+  const [reviewOnly, setReviewOnly] = useState(searchParams.get("review_required") === "true");
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -175,6 +176,7 @@ export default function ViolationsPage() {
           date_from: dateFrom || undefined,
           date_to: dateTo || undefined,
           review_required: reviewOnly || undefined,
+          token: token ?? undefined,
         });
         if (!cancelled) setData(result);
       } catch (err) {
@@ -187,7 +189,7 @@ export default function ViolationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, size, violationType, plateSearch, minConfidence, dateFrom, dateTo, reviewOnly]);
+  }, [page, size, violationType, plateSearch, minConfidence, dateFrom, dateTo, reviewOnly, token]);
 
   const totalPages = data ? Math.ceil(data.total / size) : 0;
 

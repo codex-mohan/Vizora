@@ -27,8 +27,18 @@ class ObjectClass(str, Enum):
     PLATE = "plate"
     HELMET = "helmet"
     NO_HELMET = "no_helmet"
+    TURBAN_PAGDI = "turban_pagdi"
+    HAT_CAP = "hat_cap"
+    SKULL_CAP = "skull_cap"
+    HOOD_SCARF = "hood_scarf"
+    CONSTRUCTION_HARDHAT = "construction_hardhat"
+    UNCLEAR_HEAD = "unclear_head"
     SEATBELT = "seatbelt"
     NO_SEATBELT = "no_seatbelt"
+    SEATBELT_VISIBLE = "seatbelt_visible"
+    STRAP_LIKE_FALSE_POSITIVE = "strap_like_false_positive"
+    OCCLUDED_REFLECTION = "occluded_reflection"
+    UNCLEAR = "unclear"
     UNKNOWN = "unknown"
 
 

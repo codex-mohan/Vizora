@@ -1,0 +1,124 @@
+project:
+  name: gridlock-training
+  seed: 42
+
+datasets:
+  root: /vol/datasets
+  traffic_yolo: /vol/datasets/traffic-yolo/data.yaml
+  traffic_coco_train: /vol/datasets/traffic-coco/annotations/instances_train.json
+  traffic_coco_val: /vol/datasets/traffic-coco/annotations/instances_val.json
+  traffic_coco_images: /vol/datasets/traffic-coco/images
+  plate_yolo: /vol/datasets/indian-license-plate/data.yaml
+  seatbelt_yolo: /vol/datasets/seatbelt-yolo/data.yaml
+
+hf_repos:
+  fast_detector: "your-org/yolo11s-indian-traffic"
+  accuracy_detector: "your-org/rtdetrv2-indian-traffic"
+  plate: "your-org/yolo11-plate-india"
+  seatbelt: "your-org/yolo11-seatbelt-india"
+
+runtime_contract:
+  outputs:
+    - bbox_xyxy
+    - confidence
+    - class_id
+    - class_name
+  note: "Every detector artifact must emit one bounding box and confidence score per prediction."
+
+traffic_classes:
+  - person
+  - rider
+  - motorcycle
+  - car
+  - auto
+  - bus
+  - truck
+  - bicycle
+  - helmet
+  - no_helmet
+  - turban_pagdi
+  - hat_cap
+  - skull_cap
+  - hood_scarf
+  - construction_hardhat
+  - unclear_head
+
+seatbelt_classes:
+  - seatbelt_visible
+  - no_seatbelt
+  - strap_like_false_positive
+  - occluded_reflection
+  - unclear
+
+fast_detector:
+  model: yolo11s.pt
+  data_yaml: /vol/datasets/traffic-yolo/data.yaml
+  run_name: fast_detector
+  epochs: 100
+  patience: 20
+  batch_size: 16
+  img_size: 640
+  workers: 8
+  confidence_threshold: 0.35
+  iou_threshold: 0.6
+
+accuracy_detector:
+  model: rtdetrv2_s
+  repo_dir: /root/training/third_party/rtdetrv2_pytorch
+  train_script: tools/train.py
+  config_path: configs/rtdetrv2/rtdetrv2_r18vd_120e_coco.yml
+  output_name: rtdetrv2_indian_traffic
+  epochs: 72
+  patience: 15
+  batch_size: 8
+  img_size: 640
+  confidence_threshold: 0.35
+  iou_threshold: 0.6
+
+plate_detector:
+  model: yolo11s.pt
+  data_yaml: /vol/datasets/indian-license-plate/data.yaml
+  run_name: plate_detector
+  epochs: 80
+  patience: 20
+  batch_size: 16
+  img_size: 640
+  workers: 8
+  confidence_threshold: 0.35
+  iou_threshold: 0.6
+
+seatbelt_detector:
+  model: yolo11s.pt
+  data_yaml: /vol/datasets/seatbelt-yolo/data.yaml
+  run_name: seatbelt_detector
+  epochs: 60
+  patience: 15
+  batch_size: 16
+  img_size: 640
+  workers: 8
+  confidence_threshold: 0.45
+  iou_threshold: 0.6
+  review_only_if_weak_data: true
+
+export:
+  release_root: /vol/releases
+  include_pt: true
+  include_onnx: true
+  include_engine: true
+  opset: 17
+  half: true
+  dynamic: false
+
+smoke_test:
+  fast_detector:
+    images: 16
+    epochs: 1
+  accuracy_detector:
+    images: 8
+    epochs: 1
+  plate:
+    images: 16
+    epochs: 1
+  seatbelt:
+    images: 16
+    epochs: 1

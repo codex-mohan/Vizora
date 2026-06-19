@@ -213,3 +213,46 @@
 .animate-count-up { animation: count-up 0.6s ease-out both; }
 .animate-shimmer { animation: shimmer 2s linear infinite; }
 .animate-glow-line { animation: glow-line 3s linear infinite; }
+
+[data-dashboard-shell] [data-slot="card"] {
+  transition:
+    transform 240ms ease,
+    border-color 240ms ease,
+    background-color 240ms ease,
+    box-shadow 240ms ease;
+}
+
+[data-dashboard-shell] [data-slot="card"]:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--primary) 32%, transparent);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+}
+
+[data-dashboard-shell] table tr {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+[data-dashboard-shell] table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.035);
+}
+
+[data-dashboard-shell] input,
+[data-dashboard-shell] button,
+[data-dashboard-shell] a {
+  transition-duration: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dashboard-shell] *,
+  .animate-pulse-glow,
+  .animate-count-up,
+  .animate-shimmer,
+  .animate-glow-line {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}

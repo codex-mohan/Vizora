@@ -16,14 +16,13 @@ const fadeUp = {
 };
 
 const modelStack = [
-  { stage: "Detection", model: "YOLO11n", status: "active" },
+  { stage: "Fast Detection", model: "YOLO11s ONNX/TRT", status: "active" },
+  { stage: "Accuracy Detection", model: "RT-DETRv2", status: "ready" },
   { stage: "Tracking", model: "ByteTrack v2", status: "active" },
-  { stage: "Pose", model: "YOLO11n-pose", status: "active" },
-  { stage: "Helmet", model: "EfficientNetV2-S", status: "active" },
-  { stage: "Seatbelt", model: "EfficientNetV2-S", status: "active" },
+  { stage: "Helmet/Headwear", model: "Detector classes", status: "active" },
+  { stage: "Seatbelt", model: "Detector classes", status: "review" },
   { stage: "Plate OCR", model: "PaddleOCR PP-OCRv5", status: "active" },
   { stage: "VLM", model: "Qwen-VL / template", status: "ready" },
-  { stage: "Tracker", model: "ByteTrack v2", status: "ready" },
 ];
 
 const recentEvents = [

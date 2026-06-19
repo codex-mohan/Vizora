@@ -38,29 +38,27 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("vizora_token");
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("vizora_token");
-  });
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
-    if (user) { setLoading(false); return; }
-
     let cancelled = false;
 
-    async function verify() {
+    async function hydrate() {
+      const storedToken = localStorage.getItem("vizora_token");
+      if (!storedToken) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${storedToken}` },
         });
         if (!res.ok) throw new Error("Invalid token");
         const data = await res.json();
         if (!cancelled) {
+          setToken(storedToken);
           setUser(data);
         }
       } catch {
@@ -73,12 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    verify();
+    hydrate();
 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {

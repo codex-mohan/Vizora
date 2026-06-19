@@ -115,11 +115,12 @@ export default function AnalyticsPage() {
       setLoading(true);
       setError(null);
       try {
+        const authToken = token ?? undefined;
         const [s, h, o, hm] = await Promise.all([
-          fetchAnalyticsSummary(),
-          fetchHotspots(10),
-          fetchRepeatOffenders(10),
-          fetchDayHourHeatmap(),
+          fetchAnalyticsSummary({ token: authToken }),
+          fetchHotspots(10, authToken),
+          fetchRepeatOffenders(10, authToken),
+          fetchDayHourHeatmap(authToken),
         ]);
         if (!cancelled) {
           setSummary(s);
@@ -137,7 +138,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [token]);
 
   const typeData = summary
     ? Object.entries(summary.by_type).map(([name, value]) => ({ name: name.replace(/_/g, " "), value }))
@@ -159,10 +160,10 @@ export default function AnalyticsPage() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header>
           <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-white">
-            Analytics
+            Overview
           </h1>
           <p className="mt-2 text-slate-400">
-            Violation trends, hotspots, and repeat offenders.
+            Live violation trends, hotspots, review load, and repeat offenders.
           </p>
         </header>
 

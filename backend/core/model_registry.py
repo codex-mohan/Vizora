@@ -15,9 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ProfileName(str, Enum):
-    MVP = "mvp"
+    FAST = "fast"
     ACCURACY = "accuracy"
-    EDGE = "edge"
     REVIEW = "review"
 
 
@@ -42,6 +41,9 @@ class DetectorChoice(str, Enum):
     YOLO11S = "yolo11s"
     YOLO11M = "yolo11m"
     YOLO11X = "yolo11x"
+    RTDETRV2_S = "rtdetrv2_s"
+    RTDETRV2_M = "rtdetrv2_m"
+    RTDETRV2_L = "rtdetrv2_l"
     DFINE_L = "dfine_l"
 
 
@@ -188,7 +190,7 @@ class PreprocessingConfig(BaseModel):
 class ModelProfile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: ProfileName = ProfileName.MVP
+    name: ProfileName = ProfileName.FAST
     detector: DetectorConfig = Field(default_factory=DetectorConfig)
     tracker: TrackerConfig = Field(default_factory=TrackerConfig)
     pose: PoseConfig = Field(default_factory=PoseConfig)
@@ -203,7 +205,7 @@ class ModelProfile(BaseModel):
 class ModelProfiles(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    active_profile: ProfileName = ProfileName.MVP
+    active_profile: ProfileName = ProfileName.FAST
     profiles: dict[ProfileName, ModelProfile]
 
     def active(self) -> ModelProfile:

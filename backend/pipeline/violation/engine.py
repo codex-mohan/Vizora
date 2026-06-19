@@ -63,6 +63,38 @@ class ViolationEngine:
         helmet_scores: dict[str, float],
     ) -> list[ViolationPrediction]:
         violations: list[ViolationPrediction] = []
+        detection_violation_classes = {
+            ObjectClass.NO_HELMET,
+            ObjectClass.HAT_CAP,
+            ObjectClass.SKULL_CAP,
+            ObjectClass.HOOD_SCARF,
+            ObjectClass.CONSTRUCTION_HARDHAT,
+        }
+        review_classes = {ObjectClass.UNCLEAR_HEAD}
+        for det in detections:
+            if det.label in detection_violation_classes:
+                violations.append(
+                    ViolationPrediction(
+                        violation_type=ViolationClass.HELMET,
+                        confidence=det.confidence,
+                        object_ids=[det.id],
+                        bbox=det.bbox,
+                        evidence={"source_class": det.label.value, "mode": "detection"},
+                    )
+                )
+            elif det.label in review_classes:
+                violations.append(
+                    ViolationPrediction(
+                        violation_type=ViolationClass.HELMET,
+                        confidence=det.confidence,
+                        object_ids=[det.id],
+                        bbox=det.bbox,
+                        review_required=True,
+                        review_reasons=[ReviewReason.LOW_CONFIDENCE],
+                        evidence={"source_class": det.label.value, "mode": "detection_review"},
+                    )
+                )
+
         for det in detections:
             if det.label != ObjectClass.RIDER:
                 continue
@@ -87,6 +119,30 @@ class ViolationEngine:
         seatbelt_scores: dict[str, float],
     ) -> list[ViolationPrediction]:
         violations: list[ViolationPrediction] = []
+        for det in detections:
+            if det.label == ObjectClass.NO_SEATBELT:
+                violations.append(
+                    ViolationPrediction(
+                        violation_type=ViolationClass.SEATBELT,
+                        confidence=det.confidence,
+                        object_ids=[det.id],
+                        bbox=det.bbox,
+                        evidence={"source_class": det.label.value, "mode": "detection"},
+                    )
+                )
+            elif det.label in {ObjectClass.STRAP_LIKE_FALSE_POSITIVE, ObjectClass.OCCLUDED_REFLECTION, ObjectClass.UNCLEAR}:
+                violations.append(
+                    ViolationPrediction(
+                        violation_type=ViolationClass.SEATBELT,
+                        confidence=det.confidence,
+                        object_ids=[det.id],
+                        bbox=det.bbox,
+                        review_required=True,
+                        review_reasons=[ReviewReason.LOW_CONFIDENCE],
+                        evidence={"source_class": det.label.value, "mode": "detection_review"},
+                    )
+                )
+
         for det in detections:
             if det.label != ObjectClass.DRIVER:
                 continue

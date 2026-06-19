@@ -16,13 +16,43 @@ from pipeline.contracts import BBox, DetectedObject, ObjectClass, PreprocessedIm
 
 logger = logging.getLogger(__name__)
 
-COCO_TO_OBJECT_CLASS = {
+MODEL_TO_OBJECT_CLASS = {
     "person": ObjectClass.PEDESTRIAN,
+    "pedestrian": ObjectClass.PEDESTRIAN,
+    "rider": ObjectClass.RIDER,
+    "driver": ObjectClass.DRIVER,
     "bicycle": ObjectClass.BICYCLE,
     "car": ObjectClass.CAR,
     "motorcycle": ObjectClass.MOTORCYCLE,
     "bus": ObjectClass.BUS,
     "truck": ObjectClass.TRUCK,
+    "auto": ObjectClass.AUTO,
+    "plate": ObjectClass.PLATE,
+    "license_plate": ObjectClass.PLATE,
+    "helmet": ObjectClass.HELMET,
+    "motorcycle_helmet": ObjectClass.HELMET,
+    "no_helmet": ObjectClass.NO_HELMET,
+    "no_headwear": ObjectClass.NO_HELMET,
+    "turban_pagdi": ObjectClass.TURBAN_PAGDI,
+    "hat_cap": ObjectClass.HAT_CAP,
+    "skull_cap": ObjectClass.SKULL_CAP,
+    "hood_scarf": ObjectClass.HOOD_SCARF,
+    "construction_hardhat": ObjectClass.CONSTRUCTION_HARDHAT,
+    "unclear_head": ObjectClass.UNCLEAR_HEAD,
+    "unclear_occluded": ObjectClass.UNCLEAR_HEAD,
+    "seatbelt": ObjectClass.SEATBELT,
+    "seatbelt_visible": ObjectClass.SEATBELT_VISIBLE,
+    "no_seatbelt": ObjectClass.NO_SEATBELT,
+    "strap_like_false_positive": ObjectClass.STRAP_LIKE_FALSE_POSITIVE,
+    "occluded_reflection": ObjectClass.OCCLUDED_REFLECTION,
+    "unclear": ObjectClass.UNCLEAR,
+}
+
+COCO_MODEL_CLASS_NAMES = ["person", "bicycle", "car", "motorcycle", "bus", "truck"]
+RTDETRV2_CHOICES = {
+    DetectorChoice.RTDETRV2_S,
+    DetectorChoice.RTDETRV2_M,
+    DetectorChoice.RTDETRV2_L,
 }
 
 
@@ -45,6 +75,8 @@ class DetectorAdapter:
         if self.config.choice == DetectorChoice.DFINE_L:
             dfine_weights = BACKEND_ROOT / "models" / "detect" / "dfine_l.pth"
             return dfine_weights.exists() or self._has_dfine_repo()
+        if self.config.choice in RTDETRV2_CHOICES:
+            return bool(self.config.weights and (BACKEND_ROOT / self.config.weights).exists())
         return self.config.choice in YOLO_MODEL_NAMES or bool(
             self.config.weights and (BACKEND_ROOT / self.config.weights).exists()
         )
@@ -60,6 +92,8 @@ class DetectorAdapter:
 
             if self._is_dfine:
                 return self._detect_dfine(model, img_array, pil_image.size)
+            elif self.config.choice in RTDETRV2_CHOICES:
+                return self._detect_rtdetrv2(model, img_array, pil_image.size)
             else:
                 return self._detect_yolo(model, img_array)
         except Exception as e:
@@ -81,7 +115,7 @@ class DetectorAdapter:
         for box in results[0].boxes:
             class_id = int(box.cls.item())
             class_name = str(names[class_id])
-            label = COCO_TO_OBJECT_CLASS.get(class_name)
+            label = MODEL_TO_OBJECT_CLASS.get(class_name)
             if label is None:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
@@ -116,10 +150,10 @@ class DetectorAdapter:
                 if max_score.item() < self.config.confidence_threshold:
                     continue
                 class_id_int = class_id.item()
-                if class_id_int >= len(COCO_TO_OBJECT_CLASS):
+                if class_id_int >= len(COCO_MODEL_CLASS_NAMES):
                     continue
-                class_name = list(COCO_TO_OBJECT_CLASS.keys())[class_id_int]
-                label = COCO_TO_OBJECT_CLASS.get(class_name)
+                class_name = COCO_MODEL_CLASS_NAMES[class_id_int]
+                label = MODEL_TO_OBJECT_CLASS.get(class_name)
                 if label is None:
                     continue
 
@@ -146,6 +180,10 @@ class DetectorAdapter:
 
         if self.config.choice == DetectorChoice.DFINE_L:
             return self._load_dfine()
+
+        if self.config.choice in RTDETRV2_CHOICES:
+            self._model = self.config.weights
+            return self._model
 
         if self.config.weights and (BACKEND_ROOT / self.config.weights).exists():
             model_path = str(BACKEND_ROOT / self.config.weights)
@@ -193,6 +231,14 @@ class DetectorAdapter:
 
     def _has_dfine_repo(self) -> bool:
         return (BACKEND_ROOT / "third_party" / "D-FINE").exists()
+
+    def _detect_rtdetrv2(self, model, img_array: np.ndarray, img_size: tuple[int, int]) -> list[DetectedObject]:
+        logger.warning(
+            "RT-DETRv2 runtime adapter is not implemented yet; use the fast YOLO ONNX/TensorRT profile "
+            "or export a runtime adapter for %s.",
+            self.config.weights,
+        )
+        return []
 
     def _infer_riders(self, detections: list[DetectedObject]) -> list[DetectedObject]:
         motorcycles = [d for d in detections if d.label == ObjectClass.MOTORCYCLE]

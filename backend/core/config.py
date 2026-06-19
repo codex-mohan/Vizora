@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     degraded_enter_evals: int = 5
 
     model_profiles_path: str = "configs/model_profiles.example.yaml"
-    active_model_profile: str = "mvp"
+    active_model_profile: str = "fast"
     camera_scenes_path: str = "configs/camera_scenes.example.yaml"
 
     detection_model: str = "models/detect/dfine_l.onnx"

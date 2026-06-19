@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -16,6 +17,7 @@ from pipeline.contracts import MediaInput, ProcessingMode
 from pipeline.infer import InferencePipeline
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _get_pipeline(request: Request) -> InferencePipeline:
@@ -51,26 +53,8 @@ async def _persist_violations(
             folder=f"annotated/{org_id}"
         )
 
-    # Create evidence packet
-    evidence_packet = EvidencePacket(
-        id=uuid.UUID(result.evidence_packet_id.replace("ev-", "").replace("pending", uuid.uuid4().hex[:12])),
-        violation_id=uuid.uuid4(),  # will update after violation created
-        frame_urls=[raw_key],
-        annotated_frame_url=annotated_key,
-        plate_crop_url=None,
-        vlm_description=result.description,
-        hash_chain=hashlib.sha256(
-            f"{result.request_id}:{result.camera_id}:{result.timestamp}".encode()
-        ).hexdigest(),
-        metadata_json={
-            "request_id": result.request_id,
-            "model_profile": result.model_profile,
-            "quality_score": result.quality.score,
-            "detection_count": len(result.detections),
-        },
-    )
-
     # Persist each violation
+    packet_base_id = uuid.UUID(result.evidence_packet_id.replace("ev-", "").replace("pending", uuid.uuid4().hex[:12]))
     for violation in result.violations:
         plate_text = None
         plate_hash = None
@@ -80,13 +64,18 @@ async def _persist_violations(
                 plate_text = best_plate.plate_text
                 plate_hash = hashlib.sha256(plate_text.encode()).hexdigest()
 
+        review_reasons = {
+            *(r.value for r in result.review_reasons),
+            *(r.value for r in violation.review_reasons),
+        }
+
         db_violation = Violation(
             org_id=org_id,
             violation_type=violation.violation_type.value,
             confidence=violation.confidence,
             status="pending",
-            review_required=violation.review_required,
-            review_reasons=[r.value for r in violation.review_reasons] if violation.review_reasons else None,
+            review_required=result.review_required or violation.review_required,
+            review_reasons=sorted(review_reasons) or None,
             vehicle_class=None,
             plate_text=plate_text,
             plate_hash=plate_hash,
@@ -100,8 +89,29 @@ async def _persist_violations(
         db.add(db_violation)
         await db.flush()
 
-        # Update evidence packet with actual violation ID
-        evidence_packet.violation_id = db_violation.id
+        packet_id = (
+            packet_base_id
+            if len(result.violations) == 1
+            else uuid.uuid5(uuid.NAMESPACE_URL, f"{result.evidence_packet_id}:{db_violation.id}")
+        )
+        evidence_packet = EvidencePacket(
+            id=packet_id,
+            violation_id=db_violation.id,
+            frame_urls=[raw_key],
+            annotated_frame_url=annotated_key,
+            plate_crop_url=None,
+            vlm_description=result.description,
+            hash_chain=hashlib.sha256(
+                f"{result.request_id}:{result.camera_id}:{result.timestamp}:{db_violation.id}".encode()
+            ).hexdigest(),
+            metadata_json={
+                "request_id": result.request_id,
+                "model_profile": result.model_profile,
+                "quality_score": result.quality.score,
+                "detection_count": len(result.detections),
+                "scan_review_required": result.review_required,
+            },
+        )
         db.add(evidence_packet)
 
         # Upsert plate record
@@ -133,6 +143,7 @@ async def process_media(
     file: UploadFile = File(...),
     camera_id: str = Form("demo-camera"),
     mode: ProcessingMode = Form(ProcessingMode.STILL_IMAGE),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     data = await file.read()
     if not data:
@@ -151,10 +162,9 @@ async def process_media(
     # Persist to DB (org_id from auth or default demo org)
     try:
         async with async_session_factory() as db:
-            org_id = uuid.UUID("00000000-0000-0000-0000-000000000001")  # demo org
-            await _persist_violations(result, media, db, org_id)
+            await _persist_violations(result, media, db, current_user.org_id)
     except Exception:
-        pass  # don't fail inference if persistence fails
+        logger.exception("Failed to persist inference result %s", result.request_id)
 
     realtime_bus.publish(
         {

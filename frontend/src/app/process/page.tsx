@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertTriangle, BrainCircuit, FileImage, Loader2, ShieldCheck, Upload } from "lucide-react";
+import { Activity, AlertTriangle, BrainCircuit, Loader2, ShieldCheck, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/auth-context";
 import type { DetectedObject, ProcessResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 type ImageSize = {
@@ -21,9 +20,74 @@ function confidence(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function detectionStyle(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized === "motorcycle" || normalized === "car" || normalized === "bus" || normalized === "truck" || normalized === "auto" || normalized === "bicycle") {
+    return {
+      name: "Vehicle",
+      swatch: "bg-sky-300",
+      border: "border-sky-300/90",
+      fill: "bg-sky-300/10",
+      label: "border-sky-300/40 text-sky-100",
+      text: "text-sky-300",
+      shadow: "shadow-[0_0_28px_rgba(125,211,252,0.26)]",
+    };
+  }
+  if (normalized === "rider" || normalized === "driver") {
+    return {
+      name: "Rider",
+      swatch: "bg-violet-300",
+      border: "border-violet-300/90",
+      fill: "bg-violet-300/10",
+      label: "border-violet-300/40 text-violet-100",
+      text: "text-violet-300",
+      shadow: "shadow-[0_0_28px_rgba(167,139,250,0.28)]",
+    };
+  }
+  if (normalized === "pedestrian") {
+    return {
+      name: "Pedestrian",
+      swatch: "bg-lime-300",
+      border: "border-lime-300/90",
+      fill: "bg-lime-300/10",
+      label: "border-lime-300/40 text-lime-100",
+      text: "text-lime-300",
+      shadow: "shadow-[0_0_28px_rgba(190,242,100,0.2)]",
+    };
+  }
+  if (normalized === "plate") {
+    return {
+      name: "Plate",
+      swatch: "bg-amber-300",
+      border: "border-amber-300/90",
+      fill: "bg-amber-300/10",
+      label: "border-amber-300/40 text-amber-100",
+      text: "text-amber-300",
+      shadow: "shadow-[0_0_28px_rgba(252,211,77,0.22)]",
+    };
+  }
+  return {
+    name: "Other",
+    swatch: "bg-slate-300",
+    border: "border-slate-300/80",
+    fill: "bg-slate-300/10",
+    label: "border-slate-300/30 text-slate-100",
+    text: "text-slate-300",
+    shadow: "shadow-[0_0_24px_rgba(203,213,225,0.16)]",
+  };
+}
+
+const DETECTION_LEGEND = [
+  detectionStyle("motorcycle"),
+  detectionStyle("rider"),
+  detectionStyle("pedestrian"),
+  detectionStyle("plate"),
+];
+
 function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; imageSize: ImageSize | null }) {
   if (!imageSize) return null;
 
+  const style = detectionStyle(detection.label);
   const left = (detection.bbox.x1 / imageSize.width) * 100;
   const top = (detection.bbox.y1 / imageSize.height) * 100;
   const width = ((detection.bbox.x2 - detection.bbox.x1) / imageSize.width) * 100;
@@ -31,10 +95,10 @@ function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; image
 
   return (
     <div
-      className="absolute rounded-lg border border-violet-300/90 bg-violet-300/10 shadow-[0_0_28px_rgba(139,92,246,0.28)]"
+      className={`absolute rounded-lg border ${style.border} ${style.fill} ${style.shadow}`}
       style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
     >
-      <span className="absolute -top-7 left-0 rounded-md border border-violet-300/40 bg-slate-950/90 px-2 py-1 font-metadata text-[10px] uppercase tracking-[0.18em] text-violet-100 backdrop-blur">
+      <span className={`absolute -top-7 left-0 rounded-md border bg-slate-950/90 px-2 py-1 font-metadata text-[10px] uppercase tracking-[0.18em] backdrop-blur ${style.label}`}>
         {detection.label} {confidence(detection.confidence)}
       </span>
     </div>
@@ -65,7 +129,7 @@ export default function ProcessPage() {
     };
   }, []);
 
-  const topDetections = useMemo(() => result?.detections.slice(0, 6) ?? [], [result]);
+  const topDetections = useMemo(() => result?.detections ?? [], [result]);
 
   async function submit() {
     if (!file) return;
@@ -105,8 +169,8 @@ export default function ProcessPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#100f18] px-5 py-16 text-slate-100">
-      <div className="mx-auto max-w-3xl space-y-10">
+    <main className="px-5 py-6 text-slate-100 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-5xl space-y-8">
         <header className="space-y-2">
           <h1 className="font-heading text-3xl font-semibold tracking-[-0.03em] text-white">
             Process Evidence
@@ -124,12 +188,12 @@ export default function ProcessPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             {previewUrl ? (
-              <div className="relative w-full overflow-hidden rounded-xl border border-white/[0.06]">
+              <div className="relative w-full rounded-xl border border-white/[0.06]">
                 <img
                   ref={imageRef}
                   src={previewUrl}
                   alt="Uploaded traffic evidence"
-                  className="max-h-[480px] w-full object-contain"
+                  className="block max-h-[520px] w-full rounded-xl object-contain"
                   onLoad={() => {
                     const image = imageRef.current;
                     if (image) setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
@@ -167,6 +231,20 @@ export default function ProcessPage() {
             <p className="text-center font-metadata text-xs uppercase tracking-widest text-slate-500">
               {file.name}
             </p>
+          )}
+
+          {result && (
+            <div className="flex flex-wrap justify-center gap-2">
+              {DETECTION_LEGEND.map((item) => (
+                <span
+                  key={item.name}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 font-metadata text-[10px] uppercase tracking-[0.18em] text-slate-400"
+                >
+                  <span className={`size-2 rounded-full ${item.swatch}`} />
+                  {item.name}
+                </span>
+              ))}
+            </div>
           )}
 
           <div className="space-y-2">
@@ -237,8 +315,11 @@ export default function ProcessPage() {
                     className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium capitalize text-slate-100">{detection.label}</span>
-                      <span className="font-metadata text-xs text-violet-300">
+                      <span className="flex items-center gap-2 font-medium capitalize text-slate-100">
+                        <span className={`size-2 rounded-full ${detectionStyle(detection.label).swatch}`} />
+                        {detection.label}
+                      </span>
+                      <span className={`font-metadata text-xs ${detectionStyle(detection.label).text}`}>
                         {confidence(detection.confidence)}
                       </span>
                     </div>

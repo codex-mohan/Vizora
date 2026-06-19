@@ -3,6 +3,7 @@ import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export const metadata: Metadata = {
   title: "Vizora — Traffic Violation Detection",
@@ -26,7 +27,9 @@ export default function RootLayout({
       className="dark h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </AuthProvider>
       </body>
     </html>
   );

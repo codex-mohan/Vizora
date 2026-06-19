@@ -11,6 +11,11 @@ build/
 .venv/
 venv/
 env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # uv
 .uv/
@@ -22,6 +27,7 @@ out/
 build/
 *.tsbuildinfo
 .npm
+pnpm-debug.log*
 
 # Environment
 .env
@@ -29,6 +35,15 @@ build/
 .env.*.local
 
 # Model weights & data (large files)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.bin
+*.safetensors
+*.ckpt
+*.weights
+*.tflite
 backend/models/**/*.onnx
 backend/models/**/*.pt
 backend/models/**/*.pth
@@ -37,10 +52,38 @@ backend/models/**/*.bin
 backend/models/**/*.safetensors
 backend/*.pt
 backend/*.pth
+backend/runs/
+backend/wandb/
+backend/mlruns/
 data/samples/*
 !data/samples/.gitkeep
 data/annotations/*
 !data/annotations/.gitkeep
+data/raw/
+data/processed/
+data/interim/
+data/external/
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/**/*.mp4
+data/**/*.avi
+data/**/*.mov
+data/**/*.zip
+data/**/*.tar
+data/**/*.tar.gz
+
+# Training workspace (Modal/Hugging Face/local outputs)
+training/datasets/
+training/runs/
+training/checkpoints/
+training/artifacts/
+training/outputs/
+training/downloads/
+training/hf-cache/
+training/modal-volume/
+training/wandb/
+training/mlruns/
 
 # IDE
 .vscode/
@@ -58,3 +101,6 @@ logs/
 
 # Docker
 docker/data/
+
+# Generated reports / local analysis
+graphify-out/

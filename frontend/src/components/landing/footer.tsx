@@ -10,7 +10,7 @@ export function Footer() {
         <div className="mb-10 flex flex-col items-center gap-4 sm:mb-16 sm:flex-row sm:justify-between">
           <Link
             className="font-metadata text-xs uppercase tracking-widest text-slate-500 transition-colors hover:text-white"
-            href="/process"
+            href="/dashboard"
           >
             Process
           </Link>
@@ -24,7 +24,7 @@ export function Footer() {
 
           <Link
             className="font-metadata text-xs uppercase tracking-widest text-slate-500 transition-colors hover:text-white"
-            href="/analytics"
+            href="/dashboard"
           >
             Analytics
           </Link>
