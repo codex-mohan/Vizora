@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.137.2",
+    "minio>=7.2.0",
     "opencv-python>=4.13.0.92",
     "paddleocr>=3.7.0",
     "paddlepaddle==3.2.2",
@@ -18,6 +19,11 @@ dependencies = [
     "python-multipart>=0.0.32",
     "ultralytics>=8.4.71",
     "uvicorn[standard]>=0.49.0",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
 ]
 
 [project.scripts]
@@ -34,4 +40,6 @@ module-root = ""
 [dependency-groups]
 dev = [
     "httpx2>=2.4.0",
+    "pytest>=8.0.0",
+    "bcrypt<4.1",
 ]
