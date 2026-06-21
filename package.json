@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "docker compose up -d postgres redis minio && concurrently --names backend,frontend --prefix-colors blue,green \"cd backend && uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload\" \"cd frontend && pnpm dev\"",
+    "dev": "docker compose up -d postgres redis minio && concurrently --names proxy,backend --prefix-colors green,blue \"cd frontend && portless run pnpm dev\" \"cd backend && uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload\"",
     "dev:services": "docker compose up -d postgres redis minio",
+    "dev:frontend": "cd frontend && portless run pnpm dev",
     "dev:backend": "cd backend && uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload",
-    "dev:frontend": "cd frontend && pnpm dev",
+    "dev:alias": "portless alias api 8000",
+    "dev:hosts": "portless hosts sync",
     "test:e2e": "cd frontend && pnpm test:e2e"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "portless": "^0.14.0"
   }
 }

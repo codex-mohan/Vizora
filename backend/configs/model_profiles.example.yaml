@@ -5,42 +5,35 @@ profiles:
     name: fast
     detector:
       choice: yolo11s
-      runtime: onnx
-      weights: models/detect/yolo11s_indian_traffic.onnx
+      weights: null
       confidence_threshold: 0.35
       iou_threshold: 0.6
-      options:
-        hf_repo: your-org/yolo11s-indian-traffic
-        fallback_weights: models/detect/yolo11s_indian_traffic.engine
     tracker:
       choice: byte_track_v2
-      runtime: onnx
       max_lost_frames: 30
       association_threshold: 0.5
     pose:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: rtmo_m
+      confidence_threshold: 0.4
     helmet_classifier:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: yolo11_helmet
+      weights: models/helmet/yolov11s(80 epochs).pt
+      confidence_threshold: 0.35
     seatbelt_classifier:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: yolo11_seatbelt
+      weights: models/seatbelt_det/best.pt
+      confidence_threshold: 0.3
     plate_detector:
       choice: yolo11_plate
-      runtime: onnx
-      weights: models/anpr/yolo11_plate_india.onnx
       confidence_threshold: 0.35
-      options:
-        hf_repo: your-org/yolo11-plate-india
-        fallback_weights: models/anpr/yolo11_plate_india.engine
     ocr:
       primary: paddleocr_pp_ocrv5
       fallback: parseq
       accept_threshold: 0.7
       review_threshold: 0.6
-      primary_runtime: onnx
-      fallback_runtime: onnx
     vlm:
       enabled: false
       choice: disabled
@@ -54,55 +47,42 @@ profiles:
   accuracy:
     name: accuracy
     detector:
-      choice: rtdetrv2_s
-      runtime: onnx
-      weights: models/detect/rtdetrv2_indian_traffic.onnx
+      choice: rtdetrv2_l
+      weights: models/detect/weights/RT-DETRv2/best.pth
       confidence_threshold: 0.3
       iou_threshold: 0.6
-      options:
-        hf_repo: your-org/rtdetrv2-indian-traffic
-        fallback_weights: models/detect/rtdetrv2_indian_traffic.engine
     tracker:
       choice: byte_track_v2
-      runtime: onnx
       max_lost_frames: 30
       association_threshold: 0.5
     pose:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: rtmo_m
+      confidence_threshold: 0.4
     helmet_classifier:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: yolo11_helmet
+      weights: models/helmet/yolov11s(80 epochs).pt
+      confidence_threshold: 0.35
     seatbelt_classifier:
-      enabled: false
-      choice: disabled
-      options:
-        detector_weights: models/detect/yolo11_seatbelt.onnx
-        hf_repo: your-org/yolo11-seatbelt-india
+      enabled: true
+      choice: yolo11_seatbelt
+      weights: models/seatbelt_det/best.pt
+      confidence_threshold: 0.3
     plate_detector:
       choice: yolo11_plate
-      runtime: onnx
-      weights: models/anpr/yolo11_plate_india.onnx
       confidence_threshold: 0.35
-      options:
-        hf_repo: your-org/yolo11-plate-india
-        fallback_weights: models/anpr/yolo11_plate_india.engine
     ocr:
       primary: paddleocr_pp_ocrv5
       fallback: parseq
-      accept_threshold: 0.72
+      accept_threshold: 0.7
       review_threshold: 0.6
-      primary_runtime: onnx
-      fallback_runtime: onnx
     vlm:
-      choice: qwen3_5_vl
-      runtime: external_api
-      endpoint_url: http://localhost:8080/v1/chat/completions
-      max_tokens: 768
-      temperature: 0.1
+      enabled: false
+      choice: disabled
     preprocessing:
       budget_ms: 15
-      lowlight_model: zero_dce_plus_plus
+      lowlight_model: disabled
       haze_model: disabled
       rain_model: disabled
       crop_super_resolution: real_esrgan
@@ -110,56 +90,42 @@ profiles:
   review:
     name: review
     detector:
-      choice: rtdetrv2_l
-      runtime: tensorrt
-      weights: models/detect/rtdetrv2_indian_traffic.engine
+      choice: dfine_l
+      weights: models/detect/weights/D-FINE/best_stg1.pth
       confidence_threshold: 0.25
       iou_threshold: 0.6
-      options:
-        hf_repo: your-org/rtdetrv2-indian-traffic
-        fallback_weights: models/detect/rtdetrv2_indian_traffic.onnx
     tracker:
       choice: byte_track_v2
-      runtime: onnx
       max_lost_frames: 45
       association_threshold: 0.45
     pose:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: rtmo_m
+      confidence_threshold: 0.35
     helmet_classifier:
-      enabled: false
-      choice: disabled
+      enabled: true
+      choice: yolo11_helmet
+      weights: models/helmet/yolov11s(80 epochs).pt
+      confidence_threshold: 0.3
     seatbelt_classifier:
-      enabled: false
-      choice: disabled
-      options:
-        detector_weights: models/detect/yolo11_seatbelt.engine
-        fallback_weights: models/detect/yolo11_seatbelt.onnx
-        hf_repo: your-org/yolo11-seatbelt-india
+      enabled: true
+      choice: yolo11_seatbelt
+      weights: models/seatbelt_det/best.pt
+      confidence_threshold: 0.25
     plate_detector:
       choice: yolo11_plate
-      runtime: tensorrt
-      weights: models/anpr/yolo11_plate_india.engine
       confidence_threshold: 0.3
-      options:
-        hf_repo: your-org/yolo11-plate-india
-        fallback_weights: models/anpr/yolo11_plate_india.onnx
     ocr:
       primary: paddleocr_pp_ocrv5
       fallback: parseq
-      accept_threshold: 0.7
+      accept_threshold: 0.65
       review_threshold: 0.5
-      primary_runtime: onnx
-      fallback_runtime: onnx
     vlm:
-      choice: qwen2_5_vl_7b
-      runtime: huggingface
-      weights: models/vlm/qwen2_5_vl_7b
-      max_tokens: 1024
-      temperature: 0.1
+      enabled: false
+      choice: disabled
     preprocessing:
-      budget_ms: 30
-      lowlight_model: zero_dce_plus_plus
+      budget_ms: 20
+      lowlight_model: disabled
       haze_model: disabled
       rain_model: disabled
       crop_super_resolution: real_esrgan

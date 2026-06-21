@@ -29,11 +29,19 @@ import {
 import {
   fetchAnalyticsSummary,
   fetchDayHourHeatmap,
+  fetchHotspotMap,
   fetchHotspots,
   fetchRepeatOffenders,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import type { AnalyticsSummary, HeatmapCell, Hotspot, RepeatOffender } from "@/lib/types";
+import type {
+  AnalyticsSummary,
+  HeatmapCell,
+  Hotspot,
+  HotspotMapResponse,
+  RepeatOffender,
+} from "@/lib/types";
+import { ViolationHotspotMap } from "@/components/analytics/violation-hotspot-map";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,6 +107,7 @@ export default function AnalyticsPage() {
   const { token, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [hotspotMap, setHotspotMap] = useState<HotspotMapResponse | null>(null);
   const [offenders, setOffenders] = useState<RepeatOffender[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,17 +125,19 @@ export default function AnalyticsPage() {
       setError(null);
       try {
         const authToken = token ?? undefined;
-        const [s, h, o, hm] = await Promise.all([
+        const [s, h, o, hm, geo] = await Promise.all([
           fetchAnalyticsSummary({ token: authToken }),
           fetchHotspots(10, authToken),
           fetchRepeatOffenders(10, authToken),
           fetchDayHourHeatmap(authToken),
+          fetchHotspotMap({ limit: 5000, token: authToken }),
         ]);
         if (!cancelled) {
           setSummary(s);
           setHotspots(h);
           setOffenders(o);
           setHeatmap(hm);
+          setHotspotMap(geo);
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load analytics");
@@ -213,6 +224,18 @@ export default function AnalyticsPage() {
             loading={loading}
           />
         </div>
+
+        <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="font-heading text-2xl">Violation Road Heatmap</CardTitle>
+            <p className="text-sm text-slate-400">
+              Weighted violation density by location, with route-level overlays when road segment geometry is configured.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ViolationHotspotMap data={hotspotMap} loading={loading} />
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
@@ -478,15 +501,18 @@ export default function AnalyticsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {o.violation_types.slice(0, 3).map((t) => (
-                              <Badge
-                                key={t}
-                                variant="outline"
-                                className="border-white/15 text-[10px] text-slate-400"
-                              >
-                                {t.replace(/_/g, " ")}
-                              </Badge>
-                            ))}
+                            {Object.entries(o.violation_types)
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 3)
+                              .map(([t, count]) => (
+                                <Badge
+                                  key={t}
+                                  variant="outline"
+                                  className="border-white/15 text-[10px] text-slate-400"
+                                >
+                                  {t.replace(/_/g, " ")} x{count}
+                                </Badge>
+                              ))}
                           </div>
                         </TableCell>
                       </TableRow>

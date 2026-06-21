@@ -1,7 +1,11 @@
 {
-  "name": "frontend",
+  "name": "vizora-web",
   "version": "0.1.0",
   "private": true,
+  "portless": {
+    "name": "vizora",
+    "script": "dev"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

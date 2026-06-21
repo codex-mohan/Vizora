@@ -3,6 +3,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -146,6 +147,19 @@
 
 .font-metadata {
   font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+}
+
+.maplibregl-popup-content {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.94);
+  color: #e2e8f0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.maplibregl-popup-tip {
+  border-top-color: rgba(2, 6, 23, 0.94) !important;
+  border-bottom-color: rgba(2, 6, 23, 0.94) !important;
 }
 
 @keyframes fadeInUp {

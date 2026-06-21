@@ -13,6 +13,7 @@ from ultralytics import YOLO
 from core.config import BACKEND_ROOT
 from core.model_registry import DetectorChoice, DetectorConfig
 from pipeline.contracts import BBox, DetectedObject, ObjectClass, PreprocessedImage
+from pipeline.device import get_device, use_half
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,13 @@ YOLO_MODEL_NAMES = {
     DetectorChoice.YOLO11X: "yolo11x.pt",
 }
 
+RTDETR_MODEL_NAMES = {
+    DetectorChoice.RTDETRV2_S: "rtdetr-l.pt",
+    DetectorChoice.RTDETRV2_M: "rtdetr-l.pt",
+    DetectorChoice.RTDETRV2_L: "rtdetr-l.pt",
+    DetectorChoice.RTDETRV2_X: "rtdetr-x.pt",
+}
+
 
 class DetectorAdapter:
     def __init__(self, config: DetectorConfig) -> None:
@@ -81,18 +89,21 @@ class DetectorAdapter:
             self.config.weights and (BACKEND_ROOT / self.config.weights).exists()
         )
 
-    def detect(self, image: PreprocessedImage) -> list[DetectedObject]:
+    def detect(self, image: PreprocessedImage, img_array: np.ndarray | None = None) -> list[DetectedObject]:
         if not self.ready:
             return []
 
         try:
             model = self._load_model()
-            pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
-            img_array = np.asarray(pil_image)
+            if img_array is None:
+                pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
+                img_array = np.asarray(pil_image)
 
             if self._is_dfine:
+                pil_image = Image.fromarray(img_array)
                 return self._detect_dfine(model, img_array, pil_image.size)
             elif self.config.choice in RTDETRV2_CHOICES:
+                pil_image = Image.fromarray(img_array)
                 return self._detect_rtdetrv2(model, img_array, pil_image.size)
             else:
                 return self._detect_yolo(model, img_array)
@@ -106,6 +117,8 @@ class DetectorAdapter:
             conf=self.config.confidence_threshold,
             iou=self.config.iou_threshold,
             verbose=False,
+            device=get_device(),
+            half=use_half(),
         )
         if not results:
             return []
@@ -182,7 +195,11 @@ class DetectorAdapter:
             return self._load_dfine()
 
         if self.config.choice in RTDETRV2_CHOICES:
-            self._model = self.config.weights
+            if self.config.weights and (BACKEND_ROOT / self.config.weights).exists():
+                model_path = str(BACKEND_ROOT / self.config.weights)
+            else:
+                model_path = RTDETR_MODEL_NAMES.get(self.config.choice, "rtdetr-l.pt")
+            self._model = YOLO(model_path)
             return self._model
 
         if self.config.weights and (BACKEND_ROOT / self.config.weights).exists():
@@ -232,13 +249,37 @@ class DetectorAdapter:
     def _has_dfine_repo(self) -> bool:
         return (BACKEND_ROOT / "third_party" / "D-FINE").exists()
 
-    def _detect_rtdetrv2(self, model, img_array: np.ndarray, img_size: tuple[int, int]) -> list[DetectedObject]:
-        logger.warning(
-            "RT-DETRv2 runtime adapter is not implemented yet; use the fast YOLO ONNX/TensorRT profile "
-            "or export a runtime adapter for %s.",
-            self.config.weights,
+    def _detect_rtdetrv2(self, model: YOLO, img_array: np.ndarray, img_size: tuple[int, int]) -> list[DetectedObject]:
+        results = model.predict(
+            img_array,
+            conf=self.config.confidence_threshold,
+            iou=self.config.iou_threshold,
+            verbose=False,
+            device=get_device(),
+            half=use_half(),
         )
-        return []
+        if not results:
+            return []
+
+        detections: list[DetectedObject] = []
+        names = results[0].names
+        for box in results[0].boxes:
+            class_id = int(box.cls.item())
+            class_name = str(names[class_id])
+            label = MODEL_TO_OBJECT_CLASS.get(class_name)
+            if label is None:
+                continue
+            x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
+            detections.append(
+                DetectedObject(
+                    id=f"det-{uuid4().hex}",
+                    label=label,
+                    bbox=BBox(x1=x1, y1=y1, x2=x2, y2=y2),
+                    confidence=float(box.conf.item()),
+                    metadata={"source_class": class_name, "model": "rtdetrv2"},
+                )
+            )
+        return self._infer_riders(detections)
 
     def _infer_riders(self, detections: list[DetectedObject]) -> list[DetectedObject]:
         motorcycles = [d for d in detections if d.label == ObjectClass.MOTORCYCLE]

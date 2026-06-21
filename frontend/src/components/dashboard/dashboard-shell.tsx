@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Activity,
   Camera,
   ChevronsLeft,
   ChevronsRight,
@@ -11,6 +10,7 @@ import {
   LogOut,
   Menu,
   Search,
+  Settings2,
   Upload,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -19,17 +19,19 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import type React from "react";
 
+import { VizoraIcon } from "@/components/brand/vizora-icon";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
-const dashboardRoutes = ["/dashboard", "/process", "/analytics", "/violations", "/cameras", "/evidence"];
+const dashboardRoutes = ["/dashboard", "/process", "/analytics", "/violations", "/cameras", "/evidence", "/settings"];
 
 const primaryNav = [
   { href: "/dashboard", label: "Overview", description: "KPIs and live signal", icon: LayoutDashboard },
   { href: "/process", label: "Process", description: "Upload evidence", icon: Upload },
   { href: "/violations", label: "Violations", description: "Search records", icon: ClipboardCheck },
   { href: "/cameras", label: "Cameras", description: "Preprocessing modes", icon: Camera },
+  { href: "/settings", label: "Settings", description: "Org config & sources", icon: Settings2 },
 ];
 
 const secondaryNav = [
@@ -42,6 +44,7 @@ const routeTitles: Record<string, { title: string; eyebrow: string }> = {
   "/process": { title: "Process Evidence", eyebrow: "Upload and inference" },
   "/violations": { title: "Violations", eyebrow: "Evidence records" },
   "/cameras": { title: "Cameras", eyebrow: "Preprocessing state" },
+  "/settings": { title: "Settings", eyebrow: "Organization config" },
   "/evidence": { title: "Evidence Viewer", eyebrow: "Packet review" },
 };
 
@@ -137,9 +140,7 @@ function Sidebar({
     <aside className="flex h-full flex-col overflow-visible border-r border-white/[0.08] bg-[#0f1118]/95">
       <div className={cn("relative flex h-16 items-center border-b border-white/[0.08] px-3", collapsed ? "justify-center" : "justify-between gap-3")}>
         <Link href="/dashboard" onClick={onNavigate} className={cn("flex min-w-0 items-center gap-3", collapsed && "justify-center")} aria-label="Vizora dashboard">
-          <div className="grid size-9 place-items-center rounded-lg bg-violet-300 text-slate-950 shadow-lg shadow-violet-300/15">
-            <Activity className="size-4" />
-          </div>
+          <VizoraIcon className="size-9 rounded-lg shadow-lg shadow-violet-300/15" />
           {!collapsed && (
             <div className="min-w-0">
               <p className="font-heading text-lg font-semibold leading-none text-white">Vizora</p>

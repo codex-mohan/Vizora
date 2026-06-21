@@ -11,6 +11,169 @@ datasets:
   plate_yolo: /vol/datasets/indian-license-plate/data.yaml
   seatbelt_yolo: /vol/datasets/seatbelt-yolo/data.yaml
 
+dataset_sources:
+  traffic_primary:
+    name: BMD-45
+    repo_id: iisc-aim/BMD-45
+    source_type: huggingface
+    format: coco
+    use_for_classes:
+      - car
+      - auto
+      - bus
+      - truck
+      - motorcycle
+      - bicycle
+    do_not_infer_classes:
+      - person
+      - rider
+      - helmet
+      - no_helmet
+      - turban_pagdi
+      - hat_cap
+      - skull_cap
+      - hood_scarf
+      - construction_hardhat
+      - unclear_head
+      - seatbelt_visible
+      - no_seatbelt
+  plate_primary:
+    name: Indian Licence Plate Dataset in the Wild
+    source_type: manual_or_kaggle_download
+    required_output_format: yolo
+    use_for_classes:
+      - license_plate
+  custom_required:
+    headwear: "Annotate traffic CCTV rider/head boxes with helmet/no_helmet/turban_pagdi/hat_cap/skull_cap/hood_scarf/construction_hardhat/unclear_head."
+    seatbelt: "Annotate driver-window crops or full frames with seatbelt_visible/no_seatbelt/strap_like_false_positive/occluded_reflection/unclear."
+
+headwear_bbox_sources:
+  - name: kaggle_rider_helmet_plate
+    ref: aneesarom/rider-with-helmet-without-helmet-number-plate
+    source_type: kaggle_yolo
+    format: yolo
+    bbox_required: true
+    use_for_classes:
+      - rider
+      - helmet
+      - no_helmet
+    class_map:
+      rider: rider
+      driver: rider
+      person: rider
+      with_helmet: helmet
+      with-helmet: helmet
+      helmet: helmet
+      without_helmet: no_helmet
+      without-helmet: no_helmet
+      no_helmet: no_helmet
+      no-helmet: no_helmet
+  - name: kaggle_traffic_violation_helmet_triple_plate
+    ref: devgurucodes/trafffic-violations-triple-riding-no-helmet-plate
+    source_type: kaggle_yolo
+    format: yolo
+    bbox_required: true
+    use_for_classes:
+      - helmet
+      - no_helmet
+    class_map:
+      WithHelmet: helmet
+      With_Helmet: helmet
+      with_helmet: helmet
+      WithoutHelmet: no_helmet
+      Without_Helmet: no_helmet
+      without_helmet: no_helmet
+  - name: kaggle_smart_helmet_yolov8
+    ref: anushkagovindkadam/smart-helmet-detection-using-dl
+    source_type: kaggle_yolo
+    format: yolo
+    bbox_required: true
+    use_for_classes:
+      - rider
+      - motorcycle
+      - helmet
+      - no_helmet
+    class_map:
+      Driver with Helmet: helmet
+      Passenger with Helmet: helmet
+      Driver without Helmet: no_helmet
+      Passenger without Helmet: no_helmet
+      Driver: rider
+      Passenger: rider
+      Bike: motorcycle
+      Motorcycle: motorcycle
+  - name: kaggle_face_accessories_hard_negatives
+    ref: ashokkumarmalineni/face-coveringsaccessories-detection
+    source_type: kaggle_yolo
+    format: yolo
+    bbox_required: true
+    use_for_classes:
+      - hat_cap
+      - hood_scarf
+      - person
+    class_map:
+      cap: hat_cap
+      scarf: hood_scarf
+      scarf_kerchief: hood_scarf
+      scarf-kerchief: hood_scarf
+      kerchief: hood_scarf
+      person: person
+  - name: kaggle_safety_hat_hardhat
+    ref: itbetyar/project-safety-hat
+    source_type: kaggle_yolo
+    format: yolo
+    bbox_required: true
+    use_for_classes:
+      - construction_hardhat
+    class_map:
+      safety helmet: construction_hardhat
+      safety_hat: construction_hardhat
+      safety-hat: construction_hardhat
+      helmet: construction_hardhat
+      hardhat: construction_hardhat
+      hard_hat: construction_hardhat
+      hard-hat: construction_hardhat
+
+dataset_quality:
+  min_box_area: 64
+  min_box_side: 4
+  max_aspect_ratio: 12
+  drop_empty_converted_images: true
+  reject_unmapped_classes: true
+  note: "Synthetic data is smoke-only. Accuracy claims require real annotations for the target classes."
+
+pretrained_models:
+  fast_vehicle_yolo:
+    repo_id: iisc-aim/UVH-26
+    filename: weights/YOLOv11-S/UVH-26-MV-YOLOv11-S.pt
+    model_class: yolo
+    notes: "Fast vehicle detector. Ultralytics-compatible .pt. Drop-in for pipeline fast profile."
+  fast_vehicle_yolo_xl:
+    repo_id: iisc-aim/UVH-26
+    filename: weights/YOLOv11-X/UVH-26-MV-YOLOv11-X.pt
+    model_class: yolo
+    notes: "Larger UVH YOLO for higher accuracy when speed budget allows."
+  accuracy_vehicle_rtdetrv2:
+    repo_id: iisc-aim/BMD-45
+    filename: weights/RT-DETRv2/best.pth
+    model_class: rtdetrv2
+    notes: "RT-DETRv2 accuracy profile. PyTorch checkpoint; needs official RT-DETR repo config for ONNX export."
+  review_vehicle_dfine:
+    repo_id: iisc-aim/BMD-45
+    filename: weights/D-FINE/best_stg1.pth
+    model_class: dfine
+    notes: "D-FINE review detector. Stage-1 checkpoint; needs D-FINE repo for export."
+  helmet_yolo11:
+    repo_id: nnsohamnn/helmet-detection-yolo11
+    filename: "yolov11s(80 epochs).pt"
+    model_class: yolo
+    notes: "Helmet/no-helmet detection. Ultralytics-compatible .pt."
+  helmet_yolo11_medium:
+    repo_id: nnsohamnn/helmet-detection-yolo11
+    filename: "yolov11m(100epochs).pt"
+    model_class: yolo
+    notes: "Larger helmet YOLO for review path."
+
 hf_repos:
   fast_detector: "your-org/yolo11s-indian-traffic"
   accuracy_detector: "your-org/rtdetrv2-indian-traffic"

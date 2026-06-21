@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,8 +16,26 @@ from api.schemas.violation import ViolationList, ViolationType
 from core.database import get_db
 from core.models.camera import Camera
 from core.models.violation import EvidencePacket, Violation
+from core.storage import get_storage
 
 router = APIRouter()
+
+
+def _to_api_path(key: str | None) -> str | None:
+    if not key:
+        return None
+    if key.startswith("http://") or key.startswith("https://"):
+        return key
+    return f"/api/evidence/file?key={key}"
+
+
+def _to_api_path_list(keys: list[str]) -> list[str]:
+    return [url for key in keys if (url := _to_api_path(key))]
+
+
+class ViolationStatusUpdate(BaseModel):
+    status: str | None = None
+    action: str | None = None
 
 
 def _to_violation_schema(
@@ -38,6 +57,8 @@ def _to_violation_schema(
         description=vlm_description,
         evidence_packet_id=evidence_packet_id,
         review_required=v.review_required,
+        review_reasons=v.review_reasons or [],
+        status=v.status,
     )
 
 
@@ -171,9 +192,9 @@ async def get_violation(
         "reviewed_by": str(v.reviewed_by) if v.reviewed_by else None,
         "evidence_packet": {
             "id": str(ep.id),
-            "frame_urls": ep.frame_urls,
-            "plate_crop_url": ep.plate_crop_url,
-            "annotated_frame_url": ep.annotated_frame_url,
+            "frame_urls": _to_api_path_list(ep.frame_urls or []),
+            "plate_crop_url": _to_api_path(ep.plate_crop_url),
+            "annotated_frame_url": _to_api_path(ep.annotated_frame_url),
             "vlm_description": ep.vlm_description,
             "hash_chain": ep.hash_chain,
             "metadata": ep.metadata_json,
@@ -185,15 +206,25 @@ async def get_violation(
 @router.patch("/{violation_id}/status")
 async def update_violation_status(
     violation_id: uuid.UUID,
-    new_status: str = Query(..., alias="action"),
+    body: ViolationStatusUpdate | None = None,
+    new_status: str | None = Query(None, alias="action"),
     current_user: CurrentUser = Depends(require_role("admin", "reviewer")),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    allowed = {"approve", "reject", "escalate"}
-    if new_status not in allowed:
+    requested_status = new_status or (body.action if body else None) or (body.status if body else None)
+    status_map = {
+        "approve": "approved",
+        "approved": "approved",
+        "reject": "rejected",
+        "rejected": "rejected",
+        "escalate": "escalated",
+        "escalated": "escalated",
+    }
+    canonical_status = status_map.get(requested_status or "")
+    if canonical_status is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid action. Must be one of: {', '.join(sorted(allowed))}",
+            detail="Invalid action. Must be approve/approved, reject/rejected, or escalate/escalated.",
         )
 
     result = await db.execute(
@@ -206,9 +237,11 @@ async def update_violation_status(
     if v is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Violation not found")
 
-    v.status = new_status
+    v.status = canonical_status
     v.reviewed_at = datetime.now(timezone.utc)
     v.reviewed_by = current_user.user_id
+    await db.commit()
+    await db.refresh(v)
 
     return {
         "id": str(v.id),

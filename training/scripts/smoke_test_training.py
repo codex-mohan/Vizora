@@ -88,9 +88,11 @@ def write_temp_config(base: dict, tmp: Path, model_type: str, data_yaml: Path) -
 
 def run_script(script_name: str, args: list[str]) -> bool:
     script = Path(__file__).resolve().parent / script_name
-    completed = subprocess.run([sys.executable, str(script), *args], text=True, capture_output=True)
+    command = [sys.executable, str(script), *args]
+    log.info("Running command: %s", " ".join(command))
+    completed = subprocess.run(command, text=True)
     if completed.returncode != 0:
-        log.error("%s failed\nSTDOUT:\n%s\nSTDERR:\n%s", script_name, completed.stdout[-2000:], completed.stderr[-2000:])
+        log.error("%s failed with exit code %s", script_name, completed.returncode)
         return False
     return True
 

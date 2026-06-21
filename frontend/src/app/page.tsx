@@ -9,7 +9,8 @@ import { HeroSection } from "@/components/landing/hero-section";
 import { ModelsSection } from "@/components/landing/models-section";
 import { StatsSection } from "@/components/landing/stats-section";
 import { WorkflowSection } from "@/components/landing/workflow-section";
-import { ArrowRight, Menu, ShieldCheck, X } from "lucide-react";
+import { VizoraIcon } from "@/components/brand/vizora-icon";
+import { ArrowRight, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
@@ -30,9 +31,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#100f18]/80 backdrop-blur-2xl">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="group flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-lg bg-violet-400/10 text-violet-400 transition-colors group-hover:bg-violet-400/15">
-              <ShieldCheck className="size-4.5" />
-            </div>
+            <VizoraIcon className="size-9 rounded-lg shadow-lg shadow-violet-400/10 transition-transform group-hover:scale-105" />
             <span className="font-heading text-lg font-semibold tracking-tight">
               Vizora
             </span>

@@ -67,5 +67,13 @@ class Settings(BaseSettings):
     face_blur: bool = True
     plate_redact_public: bool = True
 
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://vizora.localhost",
+        "https://frontend.localhost",
+        "https://api.localhost",
+    ]
+
 
 settings = Settings()

@@ -44,7 +44,9 @@ class DetectorChoice(str, Enum):
     RTDETRV2_S = "rtdetrv2_s"
     RTDETRV2_M = "rtdetrv2_m"
     RTDETRV2_L = "rtdetrv2_l"
+    RTDETRV2_X = "rtdetrv2_x"
     DFINE_L = "dfine_l"
+    DFINE_X = "dfine_x"
 
 
 class TrackerChoice(str, Enum):
@@ -59,12 +61,19 @@ class PoseChoice(str, Enum):
 
 class ClassifierChoice(str, Enum):
     DISABLED = "disabled"
-    EFFICIENTNETV2_S = "efficientnetv2_s"
-    CONVNEXTV2_BASE = "convnextv2_base"
+    YOLO11_HELMET = "yolo11_helmet"
+    YOLO11_HELMET_MEDIUM = "yolo11_helmet_medium"
+    YOLO11_SEATBELT = "yolo11_seatbelt"
+    YOLO11_SEATBELT_CLS = "yolo11_seatbelt_cls"
 
 
 class PlateDetectorChoice(str, Enum):
     YOLO11_PLATE = "yolo11_plate"
+
+
+class HelmetDetectorChoice(str, Enum):
+    YOLO11_HELMET = "yolo11_helmet"
+    YOLO11_HELMET_MEDIUM = "yolo11_helmet_medium"
 
 
 class OcrChoice(str, Enum):
@@ -127,7 +136,7 @@ class PoseConfig(ComponentConfig):
 
 
 class ClassifierConfig(ComponentConfig):
-    choice: ClassifierChoice = ClassifierChoice.EFFICIENTNETV2_S
+    choice: ClassifierChoice = ClassifierChoice.YOLO11_HELMET
     confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
 
 

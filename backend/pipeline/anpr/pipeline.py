@@ -25,12 +25,23 @@ class AnprPipeline:
     def ready(self) -> bool:
         return self.ocr.primary == OcrChoice.PADDLEOCR_PP_OCRV5
 
-    def recognize(self, image: PreprocessedImage, detections: list[DetectedObject] | None = None) -> list[PlateResult]:
+    def preload(self) -> None:
+        """Pre-initialize PaddleOCR at startup to avoid first-request latency."""
+        try:
+            self._load_ocr()
+        except Exception:
+            pass
+
+    def recognize(self, image: PreprocessedImage, detections: list[DetectedObject] | None = None,
+                  img_array: np.ndarray | None = None) -> list[PlateResult]:
         if not self.ready:
             return []
         try:
             ocr_model = self._load_ocr()
-            pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
+            if img_array is None:
+                pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
+            else:
+                pil_image = Image.fromarray(img_array)
             img_w, img_h = pil_image.size
 
             crops: list[tuple[BBox, Image.Image]] = []

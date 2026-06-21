@@ -26,6 +26,21 @@ class LaneDirection(BaseModel):
     end: Point
 
 
+class GeoCoordinate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float
+    longitude: float
+
+
+class RoadSegment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    coordinates: list[GeoCoordinate] = Field(min_length=2)
+
+
 class SignalConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -43,6 +58,7 @@ class CameraSceneConfig(BaseModel):
     stop_lines: list[PolygonZone] = Field(default_factory=list)
     no_parking_zones: list[PolygonZone] = Field(default_factory=list)
     lane_directions: list[LaneDirection] = Field(default_factory=list)
+    road_segments: list[RoadSegment] = Field(default_factory=list)
     signal: SignalConfig = Field(default_factory=SignalConfig)
     homography_points: list[Point] = Field(default_factory=list)
 

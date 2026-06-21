@@ -1,0 +1,9 @@
+{
+  "name": "vizora",
+  "apps": {
+    "frontend": {
+      "name": "vizora",
+      "script": "dev:app"
+    }
+  }
+}

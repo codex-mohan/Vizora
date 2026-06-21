@@ -4,6 +4,13 @@ cameras:
     location_name: MG Road Demo Junction
     latitude: 12.9756
     longitude: 77.6068
+    road_segments:
+      - id: mg-road-eastbound
+        label: MG Road eastbound approach
+        coordinates:
+          - { latitude: 12.9753, longitude: 77.6048 }
+          - { latitude: 12.9755, longitude: 77.6062 }
+          - { latitude: 12.9757, longitude: 77.6078 }
     stop_lines:
       - id: stop-line-main
         label: Main stop line

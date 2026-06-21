@@ -30,10 +30,11 @@ Flipkart Gridlock 2.0 Hackathon — Round 2. Computer vision system that detects
 ## Tech Stack
 
 **Backend (Python):**
-- Detection: configurable via Pydantic model registry (YOLO11 for MVP, D-FINE-L for accuracy profile)
+- Detection: configurable via Pydantic model registry (YOLO11 for MVP, RT-DETRv2 for accuracy, D-FINE for review)
 - Tracking: ByteTrack v2
 - Pose: RTMO-m
-- Classifiers: EfficientNetV2-S (helmet, seatbelt)
+- Helmet: YOLO11 detection-style detector (no crop classifiers)
+- Seatbelt: YOLO11 detection-style detector (no crop classifiers)
 - ANPR: YOLOv11-plate + PaddleOCR PP-OCRv5 (primary), PARSeq (review)
 - VLM: configurable via Pydantic model registry (Qwen-VL preferred, Florence-2 fallback)
 - Preprocessing: OpenCV + Zero-DCE++ + AOD-Net + NAFNet + DerainNet
@@ -68,10 +69,12 @@ Flipkart Gridlock 2.0 Hackathon — Round 2. Computer vision system that detects
 
 ## Model Selection Rationale (don't second-guess without reason)
 
-- **Detector is profile-based:** YOLO11 for MVP speed/tooling; D-FINE-L for accuracy profile when integration time allows.
+- **Detector is profile-based:** YOLO11 for MVP speed/tooling; RT-DETRv2 for accuracy; D-FINE for review profile.
 - **ByteTrack v2 over OC-SORT/BoT-SORT:** highest IDF1 (fewest ID switches), associates low-confidence detections (occluded vehicles), no Re-ID needed.
 - **RTMO-m over RTMPose:** multi-person single-stage, no separate person crop, handles triple-ride in one pass.
-- **EfficientNetV2-S over ConvNeXt-V2 for helmet/seatbelt:** binary task doesn't need 89M params; faster, edge-deployable. ConvNeXt-V2 only as offline review model if turban edge cases fail.
+- **Helmet/headwear:** no EfficientNet crop classifier, no redundant backup. Use detection-style YOLO only.
+- **Seatbelt:** YOLO detection-style detector (Safe-Drive-TN). No crop classifiers.
+- **ANPR is reactive:** only runs when violations are detected, not on every frame. Saves GPU/CPU cycles.
 - **PaddleOCR over PARSeq as primary:** Indian regional-language plates (Hindi/Tamil/Bengal) handled natively; PARSeq is English-only without per-language fine-tuning. PARSeq wins on dirty/stylized → use as review fallback.
 - **Qwen-VL as preferred VLM:** stronger evidence descriptions when deployment target supports it; Florence-2 remains lightweight fallback. VLM output is explanation only, never final violation authority.
 

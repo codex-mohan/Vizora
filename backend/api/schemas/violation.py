@@ -29,6 +29,8 @@ class Violation(BaseModel):
     description: str | None = None
     evidence_packet_id: str | None = None
     review_required: bool = False
+    review_reasons: list[str] = Field(default_factory=list)
+    status: str = "pending"
 
 
 class ViolationList(BaseModel):

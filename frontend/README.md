@@ -2,6 +2,14 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Create a local env file if you need to override the backend or map provider:
+
+```bash
+cp .env.example .env.local
+```
+
+`NEXT_PUBLIC_MAP_STYLE_URL` can point to a MapLibre-compatible Mappls/MapmyIndia style URL when credentials are available. Without it, the analytics map uses the public MapLibre demo style so the dashboard still runs during judging.
+
 First, run the development server:
 
 ```bash

@@ -4,12 +4,23 @@ import type {
   EvidencePacket,
   HeatmapCell,
   Hotspot,
+  HotspotMapResponse,
   ProcessResult,
   RepeatOffender,
   ViolationListResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
+function resolveUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${API_BASE_URL}${url}`;
+}
+
+function resolveUrls(urls: string[]): string[] {
+  return urls.map((u) => resolveUrl(u) ?? u);
+}
 
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -79,7 +90,13 @@ export async function fetchViolations(params: {
 }
 
 export async function fetchEvidence(packetId: string, token?: string): Promise<EvidencePacket> {
-  return apiFetch<EvidencePacket>(`/api/evidence/${packetId}`, { token });
+  const data = await apiFetch<EvidencePacket>(`/api/evidence/${packetId}`, { token });
+  return {
+    ...data,
+    frame_urls: resolveUrls(data.frame_urls),
+    plate_crop_url: resolveUrl(data.plate_crop_url),
+    annotated_frame_url: resolveUrl(data.annotated_frame_url),
+  };
 }
 
 export async function updateViolationStatus(
@@ -121,6 +138,26 @@ export async function fetchDayHourHeatmap(token?: string): Promise<HeatmapCell[]
   return apiFetch<HeatmapCell[]>("/api/analytics/day-hour-heatmap", { token });
 }
 
+export async function fetchHotspotMap(params?: {
+  limit?: number;
+  date_from?: string;
+  date_to?: string;
+  camera_id?: string;
+  violation_type?: string;
+  token?: string;
+}): Promise<HotspotMapResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params?.date_from) searchParams.set("date_from", params.date_from);
+  if (params?.date_to) searchParams.set("date_to", params.date_to);
+  if (params?.camera_id) searchParams.set("camera_id", params.camera_id);
+  if (params?.violation_type) searchParams.set("violation_type", params.violation_type);
+  const qs = searchParams.toString();
+  return apiFetch<HotspotMapResponse>(`/api/analytics/hotspot-map${qs ? `?${qs}` : ""}`, {
+    token: params?.token,
+  });
+}
+
 export async function fetchCameras(token?: string): Promise<CameraInfo[]> {
   return apiFetch<CameraInfo[]>("/api/cameras", { token });
 }
@@ -130,6 +167,10 @@ export async function createCamera(data: {
   location_name?: string;
   latitude?: number;
   longitude?: number;
+  source_type?: string;
+  source_url?: string;
+  model_profile?: string;
+  enabled?: boolean;
 }, token?: string): Promise<CameraInfo> {
   return apiFetch<CameraInfo>("/api/cameras", {
     method: "POST",
@@ -137,4 +178,31 @@ export async function createCamera(data: {
     body: JSON.stringify(data),
     token,
   });
+}
+
+export async function updateCamera(
+  cameraId: string,
+  data: {
+    name?: string;
+    location_name?: string;
+    latitude?: number;
+    longitude?: number;
+    source_type?: string;
+    source_url?: string;
+    model_profile?: string;
+    enabled?: boolean;
+    status?: string;
+  },
+  token?: string,
+): Promise<CameraInfo> {
+  return apiFetch<CameraInfo>(`/api/cameras/${cameraId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    token,
+  });
+}
+
+export async function deleteCamera(cameraId: string, token?: string): Promise<void> {
+  await apiFetch(`/api/cameras/${cameraId}`, { method: "DELETE", token });
 }

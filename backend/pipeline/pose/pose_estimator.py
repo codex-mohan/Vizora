@@ -10,6 +10,7 @@ from ultralytics import YOLO
 
 from core.model_registry import PoseChoice, PoseConfig
 from pipeline.contracts import BBox, DetectedObject, Point, PoseResult, PreprocessedImage
+from pipeline.device import get_device, use_half
 
 YOLO_POSE_MODELS = {
     PoseChoice.RTMO_M: "yolo11n-pose.pt",
@@ -32,12 +33,21 @@ class PoseEstimatorAdapter:
     def ready(self) -> bool:
         return self.config.choice != PoseChoice.DISABLED
 
-    def estimate(self, image: PreprocessedImage, detections: list[DetectedObject]) -> list[PoseResult]:
+    def estimate(self, image: PreprocessedImage, detections: list[DetectedObject],
+                 img_array: np.ndarray | None = None) -> list[PoseResult]:
         if not self.ready:
             return []
         model = self._load_model()
-        pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
-        results = model.predict(np.asarray(pil_image), conf=self.config.confidence_threshold, verbose=False)
+        if img_array is None:
+            pil_image = Image.open(BytesIO(image.media.data)).convert("RGB")
+            img_array = np.asarray(pil_image)
+        results = model.predict(
+            img_array,
+            conf=self.config.confidence_threshold,
+            verbose=False,
+            device=get_device(),
+            half=use_half(),
+        )
         if not results or not results[0].keypoints:
             return []
 

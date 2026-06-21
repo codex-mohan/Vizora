@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,10 @@ class CameraCreate(BaseModel):
     location_name: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    model_profile: str = "fast"
+    enabled: bool = True
     scene_config: dict | None = None
 
 
@@ -30,6 +34,10 @@ class CameraUpdate(BaseModel):
     location_name: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    model_profile: str | None = None
+    enabled: bool | None = None
     scene_config: dict | None = None
     status: str | None = None
 
@@ -45,6 +53,10 @@ def _cam_dict(c: Camera) -> dict:
         "location_name": c.location_name,
         "latitude": c.latitude,
         "longitude": c.longitude,
+        "source_type": c.source_type,
+        "source_url": c.source_url,
+        "model_profile": c.model_profile,
+        "enabled": c.enabled,
         "current_mode": c.current_mode,
         "status": c.status,
         "scene_config": c.scene_config,
@@ -79,6 +91,10 @@ async def create_camera(
         location_name=body.location_name,
         latitude=body.latitude,
         longitude=body.longitude,
+        source_type=body.source_type,
+        source_url=body.source_url,
+        model_profile=body.model_profile,
+        enabled=body.enabled,
         scene_config=body.scene_config,
     )
     db.add(camera)
@@ -109,6 +125,7 @@ async def get_camera(
 async def update_camera(
     camera_id: uuid.UUID,
     body: CameraUpdate,
+    request: Request,
     current_user: CurrentUser = Depends(require_role("admin", "reviewer")),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -129,6 +146,23 @@ async def update_camera(
     camera.updated_at = datetime.now(timezone.utc)
     await db.flush()
     await db.refresh(camera)
+
+    from pipeline.ingest.worker import ingestion_manager
+    pipeline = request.app.state.inference_pipeline
+    cam_id = str(camera.id)
+
+    if camera.enabled and camera.source_url:
+        await ingestion_manager.start_camera(
+            camera_id=cam_id,
+            camera_name=camera.name,
+            source_type=camera.source_type or "http_snapshot",
+            source_url=camera.source_url,
+            pipeline=pipeline,
+            org_id=str(camera.org_id),
+        )
+    else:
+        await ingestion_manager.stop_camera(cam_id)
+
     return _cam_dict(camera)
 
 
@@ -174,3 +208,6 @@ async def delete_camera(
 
     camera.status = "maintenance"
     camera.updated_at = datetime.now(timezone.utc)
+
+    from pipeline.ingest.worker import ingestion_manager
+    await ingestion_manager.stop_camera(str(camera_id))

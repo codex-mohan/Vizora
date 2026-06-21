@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,6 +29,10 @@ class Camera(Base):
     location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(20), nullable=True, server_default="upload")
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_profile: Mapped[str] = mapped_column(String(20), default="fast", server_default="fast")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     current_mode: Mapped[str] = mapped_column(String(20), default="CLEAN", server_default="CLEAN")
     status: Mapped[str] = mapped_column(String(20), default="online", server_default="online")
     scene_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)

@@ -36,6 +36,67 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
   ILLEGAL_PARKING: "text-yellow-400 bg-yellow-400/10",
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function metadataText(value: unknown, fallback = "n/a") {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
+function shortHash(value: unknown) {
+  const text = metadataText(value, "");
+  return text ? `${text.slice(0, 18)}...${text.slice(-10)}` : "n/a";
+}
+
+function DetectionEvidenceList({ detections }: { detections: unknown[] }) {
+  if (!detections.length) {
+    return (
+      <p className="py-8 text-center text-sm text-slate-500">
+        No linked object detections were stored for this packet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {detections.map((item, index) => {
+        const detection = asRecord(item);
+        const bbox = asRecord(detection.bbox);
+        const confidence = Number(detection.confidence ?? 0);
+        return (
+          <div key={`${metadataText(detection.id, String(index))}-${index}`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {metadataText(detection.label).replace(/_/g, " ")}
+                </p>
+                <p className="font-metadata text-[10px] text-slate-500">
+                  id {metadataText(detection.id)}
+                </p>
+              </div>
+              <Badge variant="outline" className="border-lime-300/25 text-lime-200">
+                {Math.round(confidence * 100)}%
+              </Badge>
+            </div>
+            <p className="mt-3 font-metadata text-[11px] text-slate-400">
+              bbox [{metadataText(bbox.x1)}, {metadataText(bbox.y1)}] - [{metadataText(bbox.x2)}, {metadataText(bbox.y2)}]
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MetadataCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
@@ -143,6 +204,33 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
     ...packet.frame_urls,
   ];
   const currentFrame = allFrames[selectedFrame];
+  const metadata = asRecord(packet.metadata);
+  const violationMetadata = asRecord(metadata.violation_metadata);
+  const integrity = {
+    ...asRecord(violationMetadata.integrity),
+    ...asRecord(metadata.integrity),
+  };
+  const privacy = {
+    ...asRecord(violationMetadata.privacy),
+    ...asRecord(metadata.privacy),
+  };
+  const subject = {
+    ...asRecord(violationMetadata.subject),
+    ...asRecord(metadata.subject),
+  };
+  const review = {
+    ...asRecord(violationMetadata.review),
+    ...asRecord(metadata.review),
+  };
+  const relatedDetections = asArray(metadata.related_detections).length
+    ? asArray(metadata.related_detections)
+    : asArray(violationMetadata.related_detections);
+  const reviewReasons = violation?.review_reasons?.length
+    ? violation.review_reasons
+    : asArray(review.reasons).map(String);
+  const latitude = violation?.latitude ?? Number(metadata.latitude ?? violationMetadata.latitude);
+  const longitude = violation?.longitude ?? Number(metadata.longitude ?? violationMetadata.longitude);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
 
   return (
     <main className="min-h-screen px-5 py-6 text-slate-100 sm:px-8 lg:px-10">
@@ -224,6 +312,20 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                 </CardContent>
               </Card>
             )}
+
+            <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-heading text-2xl">
+                  <FileSearch2 className="size-5 text-violet-300" /> Object Evidence
+                </CardTitle>
+                <p className="text-sm text-slate-400">
+                  Detections linked to this violation, including bounding boxes and confidence scores.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <DetectionEvidenceList detections={relatedDetections} />
+              </CardContent>
+            </Card>
           </div>
 
           <div className="space-y-6">
@@ -257,11 +359,36 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                         value={format(new Date(violation.timestamp), "MMM d, HH:mm:ss")}
                       />
                       <MetadataCell label="Location" value={violation.location} />
+                      <MetadataCell label="Status" value={violation.status ?? "pending"} />
+                      <MetadataCell
+                        label="Review"
+                        value={violation.review_required ? "required" : "not required"}
+                      />
+                      {hasCoordinates && (
+                        <MetadataCell
+                          label="GPS"
+                          value={`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`}
+                        />
+                      )}
                       {violation.vehicle_class && (
                         <MetadataCell
                           label="Vehicle"
                           value={<span className="capitalize">{violation.vehicle_class}</span>}
                         />
+                      )}
+                      {reviewReasons.length > 0 && (
+                        <div className="col-span-2 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
+                          <p className="font-metadata text-[10px] uppercase tracking-[0.2em] text-amber-200">
+                            Review Reasons
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {reviewReasons.map((reason) => (
+                              <Badge key={reason} variant="outline" className="border-amber-300/25 text-amber-100">
+                                {reason.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </>
                   ) : (
@@ -302,6 +429,43 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
 
             <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
               <CardHeader>
+                <CardTitle className="font-heading text-xl">Identity & Privacy</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="rounded-2xl border border-lime-300/15 bg-lime-300/[0.06] p-3">
+                  <p className="font-metadata text-[10px] uppercase tracking-[0.2em] text-lime-200">
+                    Enforcement Subject
+                  </p>
+                  <p className="mt-1 text-sm text-white">
+                    {metadataText(subject.primary_identifier).replace(/_/g, " ")}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Vehicle, plate hash, camera, time, and event context are used. Face identity is not used.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <MetadataCell
+                    label="Face ID"
+                    value={metadataText(privacy.face_recognition_used)}
+                  />
+                  <MetadataCell
+                    label="Face Embeddings"
+                    value={metadataText(privacy.face_embeddings_stored)}
+                  />
+                  <MetadataCell
+                    label="Face Blur"
+                    value={metadataText(privacy.face_blur_enabled)}
+                  />
+                  <MetadataCell
+                    label="Plate Redaction"
+                    value={metadataText(privacy.public_plate_redaction_enabled)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
+              <CardHeader>
                 <CardTitle className="font-heading text-xl">Verification</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -338,6 +502,16 @@ export default function EvidencePage({ params }: { params: Promise<{ id: string 
                     </p>
                   </div>
                 )}
+                <div className="grid grid-cols-2 gap-3">
+                  <MetadataCell
+                    label="Media Hash"
+                    value={<span className="font-metadata text-xs">{shortHash(integrity.media_hash)}</span>}
+                  />
+                  <MetadataCell
+                    label="Metadata Hash"
+                    value={<span className="font-metadata text-xs">{shortHash(integrity.metadata_hash)}</span>}
+                  />
+                </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="font-metadata text-[10px] uppercase tracking-[0.2em] text-slate-500">
                     Created

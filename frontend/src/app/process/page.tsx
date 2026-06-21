@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertTriangle, BrainCircuit, Loader2, ShieldCheck, Upload } from "lucide-react";
+import { Activity, AlertTriangle, BrainCircuit, Camera, Globe, Loader2, ShieldCheck, Upload, Video } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -15,6 +15,21 @@ type ImageSize = {
   width: number;
   height: number;
 };
+
+type SourceMode = "upload" | "url" | "demo";
+
+const DEMO_SOURCES = [
+  {
+    label: "Bangalore Traffic Junction",
+    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Bangalore_traffic.jpg/1280px-Bangalore_traffic.jpg",
+    description: "Busy intersection with mixed traffic",
+  },
+  {
+    label: "Indian Highway CCTV Frame",
+    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Chennai_Expressway.jpg/1280px-Chennai_Expressway.jpg",
+    description: "Highway surveillance snapshot",
+  },
+];
 
 function confidence(value: number) {
   return `${Math.round(value * 100)}%`;
@@ -105,9 +120,37 @@ function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; image
   );
 }
 
+function SourceModeTab({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Upload;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 font-metadata text-xs uppercase tracking-[0.18em] transition-colors ${
+        active
+          ? "bg-violet-300/15 text-violet-200 border border-violet-300/30"
+          : "text-slate-500 border border-transparent hover:text-slate-300 hover:border-white/[0.06]"
+      }`}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
+  );
+}
+
 export default function ProcessPage() {
   const router = useRouter();
   const { token, loading: authLoading } = useAuth();
+  const [sourceMode, setSourceMode] = useState<SourceMode>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [cameraId, setCameraId] = useState("demo-camera");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -115,6 +158,9 @@ export default function ProcessPage() {
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,20 +177,6 @@ export default function ProcessPage() {
 
   const topDetections = useMemo(() => result?.detections ?? [], [result]);
 
-  async function submit() {
-    if (!file) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      setResult(await processMedia(file, cameraId, "still_image"));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Processing failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function handleFileChange(nextFile: File | null) {
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     setFile(nextFile);
@@ -158,6 +190,55 @@ export default function ProcessPage() {
     const url = URL.createObjectURL(nextFile);
     objectUrlRef.current = url;
     setPreviewUrl(url);
+  }
+
+  async function fetchUrlAsFile(url: string, nameHint: string): Promise<File> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+    const blob = await response.blob();
+    const ext = blob.type.includes("video") ? ".mp4" : ".jpg";
+    return new File([blob], `${nameHint}${ext}`, { type: blob.type || "image/jpeg" });
+  }
+
+  async function handleUrlSubmit() {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    setError(null);
+    try {
+      const fetchedFile = await fetchUrlAsFile(urlInput.trim(), "cctv-frame");
+      handleFileChange(fetchedFile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch URL");
+    } finally {
+      setUrlLoading(false);
+    }
+  }
+
+  async function handleDemoSelect(demoUrl: string, label: string) {
+    setDemoLoading(label);
+    setError(null);
+    try {
+      const fetchedFile = await fetchUrlAsFile(demoUrl, "demo");
+      handleFileChange(fetchedFile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load demo source");
+    } finally {
+      setDemoLoading(null);
+    }
+  }
+
+  async function submit() {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      setResult(await processMedia(file, cameraId, "still_image"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Processing failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
@@ -176,56 +257,124 @@ export default function ProcessPage() {
             Process Evidence
           </h1>
           <p className="text-base leading-7 text-slate-400">
-            Upload a traffic image to run the detection pipeline.
+            Upload an image, provide a CCTV/sample feed URL, or try a demo source to run the detection pipeline.
           </p>
         </header>
 
         <section className="space-y-6">
-          <div
-            className="flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.02] p-12 transition-colors hover:border-violet-300/30 hover:bg-violet-300/[0.03]"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {previewUrl ? (
-              <div className="relative w-full rounded-xl border border-white/[0.06]">
-                <img
-                  ref={imageRef}
-                  src={previewUrl}
-                  alt="Uploaded traffic evidence"
-                  className="block max-h-[520px] w-full rounded-xl object-contain"
-                  onLoad={() => {
-                    const image = imageRef.current;
-                    if (image) setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
-                  }}
+          <div className="flex flex-wrap gap-2">
+            <SourceModeTab active={sourceMode === "upload"} onClick={() => setSourceMode("upload")} icon={Upload} label="Upload Evidence" />
+            <SourceModeTab active={sourceMode === "url"} onClick={() => setSourceMode("url")} icon={Globe} label="CCTV / Sample URL" />
+            <SourceModeTab active={sourceMode === "demo"} onClick={() => setSourceMode("demo")} icon={Video} label="Demo Source" />
+          </div>
+
+          {sourceMode === "upload" && (
+            <div
+              className="flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.02] p-12 transition-colors hover:border-violet-300/30 hover:bg-violet-300/[0.03]"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+                <Upload className="size-8 text-slate-500" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-300">
+                  Drop an image here or click to browse
+                </p>
+                <p className="mt-1 text-xs text-slate-600">PNG, JPG, or WEBP</p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
+              />
+            </div>
+          )}
+
+          {sourceMode === "url" && (
+            <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+              <div className="flex items-center gap-3">
+                <div className="grid size-10 place-items-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                  <Camera className="size-5 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-200">HTTP CCTV / Sample Feed URL</p>
+                  <p className="text-xs text-slate-500">
+                    Paste an HTTP image or video snapshot URL. RTSP feeds require backend ingestion.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://cctv-server/snapshot.jpg"
+                  className="h-11 flex-1 border-white/[0.06] bg-white/[0.03]"
+                  onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
                 />
-                {topDetections.map((detection) => (
-                  <BoxOverlay key={detection.id} detection={detection} imageSize={imageSize} />
+                <Button
+                  onClick={handleUrlSubmit}
+                  disabled={!urlInput.trim() || urlLoading}
+                  className="h-11 cursor-pointer bg-violet-400 text-[#100f18] hover:bg-violet-300"
+                >
+                  {urlLoading ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-600">
+                Supports HTTP/HTTPS image URLs. For RTSP streams, configure backend ingestion via the Cameras settings.
+              </p>
+            </div>
+          )}
+
+          {sourceMode === "demo" && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-400">Select a sample traffic image to try the pipeline.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {DEMO_SOURCES.map((demo) => (
+                  <button
+                    key={demo.label}
+                    type="button"
+                    onClick={() => handleDemoSelect(demo.url, demo.label)}
+                    disabled={demoLoading !== null}
+                    className="group flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition-colors hover:border-violet-300/20 hover:bg-violet-300/[0.03] disabled:opacity-50"
+                  >
+                    <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                      {demoLoading === demo.label ? (
+                        <Loader2 className="size-5 animate-spin text-violet-300" />
+                      ) : (
+                        <Video className="size-5 text-slate-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-200">{demo.label}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{demo.description}</p>
+                    </div>
+                  </button>
                 ))}
               </div>
-            ) : (
-              <>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
-                  <Upload className="size-8 text-slate-500" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-300">
-                    Drop an image here or click to browse
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    PNG, JPG, or WEBP
-                  </p>
-                </div>
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
-            />
-          </div>
+            </div>
+          )}
+
+          {previewUrl && (
+            <div className="relative w-full rounded-xl border border-white/[0.06]">
+              <img
+                ref={imageRef}
+                src={previewUrl}
+                alt="Traffic evidence"
+                className="block max-h-[520px] w-full rounded-xl object-contain"
+                onLoad={() => {
+                  const image = imageRef.current;
+                  if (image) setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
+                }}
+              />
+              {topDetections.map((detection) => (
+                <BoxOverlay key={detection.id} detection={detection} imageSize={imageSize} />
+              ))}
+            </div>
+          )}
 
           {file && (
             <p className="text-center font-metadata text-xs uppercase tracking-widest text-slate-500">
@@ -324,7 +473,7 @@ export default function ProcessPage() {
                       </span>
                     </div>
                     <p className="mt-2 font-metadata text-xs text-slate-600">
-                      {Math.round(detection.bbox.x1)}, {Math.round(detection.bbox.y1)} →{" "}
+                      {Math.round(detection.bbox.x1)}, {Math.round(detection.bbox.y1)} \u2192{" "}
                       {Math.round(detection.bbox.x2)}, {Math.round(detection.bbox.y2)}
                     </p>
                   </div>

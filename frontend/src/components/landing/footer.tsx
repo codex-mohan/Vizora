@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { VizoraIcon } from "@/components/brand/vizora-icon";
 
 export function Footer() {
   return (
@@ -16,9 +16,7 @@ export function Footer() {
           </Link>
 
           <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-lg bg-violet-400/10 text-violet-400">
-              <ShieldCheck className="size-4" />
-            </div>
+            <VizoraIcon className="size-8 rounded-lg shadow-lg shadow-violet-400/10" />
             <span className="font-heading text-lg font-semibold tracking-tight text-white">Vizora</span>
           </div>
 

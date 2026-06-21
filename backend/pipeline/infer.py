@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import logging
+import time
+from io import BytesIO
 from uuid import uuid4
+
+import numpy as np
+import torch
+from PIL import Image
 
 from core.camera_state import CameraStateRegistry
 from core.config import BACKEND_ROOT, Settings
 from core.model_registry import ModelProfile
 from pipeline.anpr.pipeline import AnprPipeline, build_anpr_pipeline
 from pipeline.classify.classifiers import (
-    BinaryClassifierAdapter,
+    YoloClassifierAdapter,
     build_helmet_classifier,
     build_seatbelt_classifier,
 )
@@ -23,6 +30,8 @@ from pipeline.track.tracker import TrackerAdapter, build_tracker
 from pipeline.violation.engine import ViolationEngine
 from pipeline.vlm.describer import VlmDescriber, build_vlm_describer
 
+logger = logging.getLogger(__name__)
+
 
 class InferencePipeline:
     def __init__(self, settings: Settings, profile: ModelProfile) -> None:
@@ -33,16 +42,24 @@ class InferencePipeline:
         self.detector: DetectorAdapter = build_detector(profile.detector)
         self.tracker: TrackerAdapter = build_tracker(profile.tracker)
         self.pose_estimator: PoseEstimatorAdapter = build_pose_estimator(profile.pose)
-        self.helmet_classifier: BinaryClassifierAdapter = build_helmet_classifier(profile.helmet_classifier)
-        self.seatbelt_classifier: BinaryClassifierAdapter = build_seatbelt_classifier(profile.seatbelt_classifier)
+        self.helmet_classifier: YoloClassifierAdapter = build_helmet_classifier(profile.helmet_classifier)
+        self.seatbelt_classifier: YoloClassifierAdapter = build_seatbelt_classifier(profile.seatbelt_classifier)
         self.anpr: AnprPipeline = build_anpr_pipeline(profile.plate_detector, profile.ocr)
         self.vlm: VlmDescriber = build_vlm_describer(profile.vlm)
         self.violation_engine = ViolationEngine()
         self.evidence_builder = EvidencePacketBuilder()
 
     def process(self, media: MediaInput) -> InferenceResult:
+        t_total = time.perf_counter()
         scene = load_scene_config(BACKEND_ROOT / self.settings.camera_scenes_path, media.camera_id)
+
+        t0 = time.perf_counter()
         preprocessed = self.preprocessor.run(media, self.profile)
+        t_preprocess = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        img_array = np.asarray(Image.open(BytesIO(media.data)).convert("RGB"))
+        t_decode = time.perf_counter() - t0
 
         review_reasons: list[ReviewReason] = []
         if preprocessed.quality.review_required:
@@ -50,14 +67,30 @@ class InferencePipeline:
         if not self.detector.ready:
             review_reasons.append(ReviewReason.MODEL_NOT_READY)
 
-        detections = self.detector.detect(preprocessed)
-        tracks = self.tracker.update(detections, media.mode, image_bytes=media.data)
-        poses = self.pose_estimator.estimate(preprocessed, detections)
-        helmet_scores = self.helmet_classifier.classify(preprocessed, detections)
-        seatbelt_scores = self.seatbelt_classifier.classify(preprocessed, detections)
-        plates = self.anpr.recognize(preprocessed, detections=detections)
-        if any(plate.review_required for plate in plates):
-            review_reasons.append(ReviewReason.LOW_CONFIDENCE)
+        with torch.inference_mode():
+            t0 = time.perf_counter()
+            detections = self.detector.detect(preprocessed, img_array=img_array)
+            t_detect = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            tracks = self.tracker.update(detections, media.mode, image_bytes=media.data)
+            t_track = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            poses = self.pose_estimator.estimate(preprocessed, detections, img_array=img_array)
+            t_pose = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            helmet_scores = self.helmet_classifier.classify(preprocessed, detections, img_array=img_array)
+            t_helmet = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            seatbelt_scores = self.seatbelt_classifier.classify(preprocessed, detections, img_array=img_array)
+            t_seatbelt = time.perf_counter() - t0
+
+        t_anpr = 0.0
+        plates = []
+        t0 = time.perf_counter()
         violations = self.violation_engine.evaluate(
             mode=media.mode,
             scene=scene,
@@ -68,6 +101,14 @@ class InferencePipeline:
             helmet_scores=helmet_scores,
             seatbelt_scores=seatbelt_scores,
         )
+        t_violation = time.perf_counter() - t0
+
+        if violations:
+            t0 = time.perf_counter()
+            plates = self.anpr.recognize(preprocessed, detections=detections, img_array=img_array)
+            t_anpr = time.perf_counter() - t0
+            if any(plate.review_required for plate in plates):
+                review_reasons.append(ReviewReason.LOW_CONFIDENCE)
 
         for violation in violations:
             for reason in violation.review_reasons:
@@ -93,10 +134,13 @@ class InferencePipeline:
         evidence = self.evidence_builder.attach(media, result)
         result = result.model_copy(update={"evidence_packet_id": evidence.id})
 
+        t0 = time.perf_counter()
         description = self.vlm.describe(result)
+        t_vlm = time.perf_counter() - t0
         if description:
             result = result.model_copy(update={"description": description})
 
+        t0 = time.perf_counter()
         try:
             from pipeline.evidence.annotator import annotate_evidence
 
@@ -109,5 +153,18 @@ class InferencePipeline:
             evidence.annotated_image_bytes = annotated_bytes
         except Exception:
             pass
+        t_annotate = time.perf_counter() - t0
+
+        t_total = time.perf_counter() - t_total
+        logger.info(
+            "Pipeline [%s] total=%.0fms | decode=%.0fms preprocess=%.0fms detect=%.0fms track=%.0fms "
+            "pose=%.0fms helmet=%.0fms seatbelt=%.0fms anpr=%.0fms violations=%.0fms vlm=%.0fms annotate=%.0fms | "
+            "dets=%d plates=%d violations=%d",
+            media.camera_id, t_total * 1000,
+            t_decode * 1000, t_preprocess * 1000, t_detect * 1000, t_track * 1000,
+            t_pose * 1000, t_helmet * 1000, t_seatbelt * 1000, t_anpr * 1000,
+            t_violation * 1000, t_vlm * 1000, t_annotate * 1000,
+            len(detections), len(plates), len(violations),
+        )
 
         return result
