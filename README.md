@@ -247,6 +247,12 @@ pwsh .\scripts\package-submission.ps1
 
 The submission zip contains the source code and docs. Model weights are intentionally excluded; the app starts with the checked-in config, auto-downloadable public weights, and graceful fallbacks for optional fine-tuned assets.
 
+### Submission Assets
+
+- [Presentation deck](outputs/vizora-proposal-deck.pptx)
+- [Main submission document](outputs/pdf/vizora-submission-document.pdf)
+- [Dataset preparation and data handling document](outputs/pdf/vizora-dataset-preparation-and-data-handling.pdf)
+
 ### Prerequisites
 
 - **Node.js** 20+ and **pnpm**
