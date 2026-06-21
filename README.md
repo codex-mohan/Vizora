@@ -224,6 +224,29 @@ Each live camera keeps a sticky preprocessing mode (CLEAN/LOWLIGHT/HAZE/RAIN/MUL
 
 ## Getting Started
 
+### Judge Quick Start
+
+For hackathon reviewers, the fastest path is:
+
+```powershell
+pwsh .\scripts\judge-setup.ps1
+pnpm dev
+```
+
+If you have a live CCTV or RTSP demo clip ready, start the feed in a second terminal:
+
+```powershell
+pwsh .\scripts\start-demo-rtsp.ps1
+```
+
+To produce a clean submission zip without model weights, caches, outputs, or temp files:
+
+```powershell
+pwsh .\scripts\package-submission.ps1
+```
+
+The submission zip contains the source code and docs. Model weights are intentionally excluded; the app starts with the checked-in config, auto-downloadable public weights, and graceful fallbacks for optional fine-tuned assets.
+
 ### Prerequisites
 
 - **Node.js** 20+ and **pnpm**

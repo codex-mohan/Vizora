@@ -1,12 +1,24 @@
 "use client";
 
-import { Activity, AlertTriangle, BrainCircuit, Camera, Globe, Loader2, ShieldCheck, Upload, Video } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BrainCircuit,
+  Camera,
+  Globe,
+  Loader2,
+  Play,
+  Radio,
+  RefreshCw,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { processMedia } from "@/lib/api";
+import { fetchCameras, processMedia, realtimeEventsUrl, updateCamera } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import type { DetectedObject, ProcessResult } from "@/lib/types";
+import type { CameraInfo, DetectedObject, ProcessResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,23 +28,36 @@ type ImageSize = {
   height: number;
 };
 
-type SourceMode = "upload" | "url" | "demo";
+type SourceMode = "upload" | "url" | "camera";
 
-const DEMO_SOURCES = [
-  {
-    label: "Bangalore Traffic Junction",
-    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Bangalore_traffic.jpg/1280px-Bangalore_traffic.jpg",
-    description: "Busy intersection with mixed traffic",
-  },
-  {
-    label: "Indian Highway CCTV Frame",
-    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Chennai_Expressway.jpg/1280px-Chennai_Expressway.jpg",
-    description: "Highway surveillance snapshot",
-  },
-];
+type LiveEvent = {
+  type?: string;
+  camera_id?: string;
+  camera_name?: string;
+  timestamp?: string;
+  frame_index?: number;
+  frame_width?: number | null;
+  frame_height?: number | null;
+  detections?: number;
+  live_detections?: DetectedObject[];
+  violations?: number;
+  plates?: number;
+  latency_ms?: number;
+  violation_count?: number;
+  evidence_packet_id?: string;
+  frame_preview?: string | null;
+  annotated_preview?: boolean;
+};
 
 function confidence(value: number) {
   return `${Math.round(value * 100)}%`;
+}
+
+function sourceLabel(camera: CameraInfo) {
+  if (camera.source_type === "rtsp") return "RTSP";
+  if (camera.source_type === "http_snapshot") return "HTTP";
+  if (camera.source_type === "file_watcher") return "Folder";
+  return camera.source_type ?? "Upload";
 }
 
 function detectionStyle(label: string) {
@@ -100,7 +125,7 @@ const DETECTION_LEGEND = [
 ];
 
 function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; imageSize: ImageSize | null }) {
-  if (!imageSize) return null;
+  if (!imageSize || !detection.bbox) return null;
 
   const style = detectionStyle(detection.label);
   const left = (detection.bbox.x1 / imageSize.width) * 100;
@@ -137,8 +162,8 @@ function SourceModeTab({
       onClick={onClick}
       className={`flex items-center gap-2 rounded-xl px-4 py-2.5 font-metadata text-xs uppercase tracking-[0.18em] transition-colors ${
         active
-          ? "bg-violet-300/15 text-violet-200 border border-violet-300/30"
-          : "text-slate-500 border border-transparent hover:text-slate-300 hover:border-white/[0.06]"
+          ? "border border-violet-300/30 bg-violet-300/15 text-violet-200"
+          : "border border-transparent text-slate-500 hover:border-white/[0.06] hover:text-slate-300"
       }`}
     >
       <Icon className="size-3.5" />
@@ -160,8 +185,14 @@ export default function ProcessPage() {
   const [loading, setLoading] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<CameraInfo[]>([]);
+  const [camerasLoading, setCamerasLoading] = useState(false);
+  const [cameraActionLoading, setCameraActionLoading] = useState<string | null>(null);
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [latestLiveFrame, setLatestLiveFrame] = useState<LiveEvent | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const liveLastSeenRef = useRef(0);
   const objectUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -175,6 +206,61 @@ export default function ProcessPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    async function loadCameras() {
+      setCamerasLoading(true);
+      try {
+        const data = await fetchCameras();
+        if (cancelled) return;
+        setCameras(data);
+        if (data.length > 0) {
+          setCameraId((current) => (current === "demo-camera" ? data[0].id : current));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load cameras");
+      } finally {
+        if (!cancelled) setCamerasLoading(false);
+      }
+    }
+
+    loadCameras();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (sourceMode !== "camera" || !cameraId) return;
+
+    const events = new EventSource(realtimeEventsUrl());
+    events.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as LiveEvent;
+        if (payload.camera_id && payload.camera_id !== cameraId) return;
+        liveLastSeenRef.current = Date.now();
+        setLiveError(null);
+        setLiveEvents((prev) => [payload, ...prev].slice(0, 8));
+        if (payload.frame_preview) setLatestLiveFrame(payload);
+      } catch {
+        // Ignore malformed keepalive/event payloads.
+      }
+    };
+    events.onerror = () => {
+      if (!liveLastSeenRef.current || Date.now() - liveLastSeenRef.current > 5000) {
+        setLiveError("Live event stream is disconnected. Make sure the backend is running.");
+      }
+    };
+
+    return () => events.close();
+  }, [sourceMode, cameraId]);
+
+  const selectedCamera = useMemo(
+    () => cameras.find((camera) => camera.id === cameraId) ?? null,
+    [cameras, cameraId],
+  );
   const topDetections = useMemo(() => result?.detections ?? [], [result]);
 
   function handleFileChange(nextFile: File | null) {
@@ -214,18 +300,47 @@ export default function ProcessPage() {
     }
   }
 
-  async function handleDemoSelect(demoUrl: string, label: string) {
-    setDemoLoading(label);
+  async function refreshCameras() {
+    setCamerasLoading(true);
     setError(null);
     try {
-      const fetchedFile = await fetchUrlAsFile(demoUrl, "demo");
-      handleFileChange(fetchedFile);
+      const data = await fetchCameras();
+      setCameras(data);
+      if (!data.some((camera) => camera.id === cameraId) && data.length > 0) {
+        setCameraId(data[0].id);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load demo source");
+      setError(err instanceof Error ? err.message : "Failed to refresh cameras");
     } finally {
-      setDemoLoading(null);
+      setCamerasLoading(false);
     }
   }
+
+  async function restartCamera(camera: CameraInfo) {
+    setCameraActionLoading(camera.id);
+    setLiveEvents([]);
+    setLatestLiveFrame(null);
+    liveLastSeenRef.current = 0;
+    setLiveError(null);
+    try {
+      const updated = await updateCamera(camera.id, {
+        name: camera.name,
+        source_type: camera.source_type ?? undefined,
+        source_url: camera.source_url ?? undefined,
+        enabled: true,
+      });
+      setCameras((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setCameraId(updated.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start camera ingestion");
+    } finally {
+      setCameraActionLoading(null);
+    }
+  }
+
+  const liveFrameSize = latestLiveFrame?.frame_width && latestLiveFrame.frame_height
+    ? { width: latestLiveFrame.frame_width, height: latestLiveFrame.frame_height }
+    : null;
 
   async function submit() {
     if (!file) return;
@@ -257,15 +372,15 @@ export default function ProcessPage() {
             Process Evidence
           </h1>
           <p className="text-base leading-7 text-slate-400">
-            Upload an image, provide a CCTV/sample feed URL, or try a demo source to run the detection pipeline.
+            Upload a frame, fetch a snapshot URL, or use a registered live camera from Settings.
           </p>
         </header>
 
         <section className="space-y-6">
           <div className="flex flex-wrap gap-2">
             <SourceModeTab active={sourceMode === "upload"} onClick={() => setSourceMode("upload")} icon={Upload} label="Upload Evidence" />
-            <SourceModeTab active={sourceMode === "url"} onClick={() => setSourceMode("url")} icon={Globe} label="CCTV / Sample URL" />
-            <SourceModeTab active={sourceMode === "demo"} onClick={() => setSourceMode("demo")} icon={Video} label="Demo Source" />
+            <SourceModeTab active={sourceMode === "url"} onClick={() => setSourceMode("url")} icon={Globe} label="Snapshot URL" />
+            <SourceModeTab active={sourceMode === "camera"} onClick={() => setSourceMode("camera")} icon={Radio} label="Live Camera" />
           </div>
 
           {sourceMode === "upload" && (
@@ -301,9 +416,9 @@ export default function ProcessPage() {
                   <Camera className="size-5 text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-200">HTTP CCTV / Sample Feed URL</p>
+                  <p className="text-sm font-medium text-slate-200">HTTP Snapshot URL</p>
                   <p className="text-xs text-slate-500">
-                    Paste an HTTP image or video snapshot URL. RTSP feeds require backend ingestion.
+                    Fetch one image/video snapshot and run still-image inference against the selected camera.
                   </p>
                 </div>
               </div>
@@ -323,38 +438,208 @@ export default function ProcessPage() {
                   {urlLoading ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-slate-600">
-                Supports HTTP/HTTPS image URLs. For RTSP streams, configure backend ingestion via the Cameras settings.
-              </p>
             </div>
           )}
 
-          {sourceMode === "demo" && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-400">Select a sample traffic image to try the pipeline.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {DEMO_SOURCES.map((demo) => (
-                  <button
-                    key={demo.label}
-                    type="button"
-                    onClick={() => handleDemoSelect(demo.url, demo.label)}
-                    disabled={demoLoading !== null}
-                    className="group flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition-colors hover:border-violet-300/20 hover:bg-violet-300/[0.03] disabled:opacity-50"
-                  >
-                    <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
-                      {demoLoading === demo.label ? (
-                        <Loader2 className="size-5 animate-spin text-violet-300" />
+          {sourceMode === "camera" && (
+            <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-10 place-items-center rounded-xl border border-lime-300/20 bg-lime-300/10">
+                    <Radio className="size-5 text-lime-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">Registered Camera Sources</p>
+                    <p className="text-xs text-slate-500">
+                      Cameras added in Settings appear here. RTSP ingestion runs in the backend.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={refreshCameras}
+                  disabled={camerasLoading}
+                  className="h-9 cursor-pointer text-xs"
+                >
+                  {camerasLoading ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 size-3.5" />}
+                  Refresh
+                </Button>
+              </div>
+
+              {!cameras.length && !camerasLoading ? (
+                <div className="rounded-xl border border-dashed border-white/[0.08] bg-white/[0.02] p-6 text-sm text-slate-400">
+                  No cameras found. Add your RTSP source in Settings first, save it, then return here.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {cameras.map((camera) => {
+                    const selected = camera.id === cameraId;
+                    const canIngest = Boolean(camera.source_url && camera.enabled);
+                    return (
+                      <button
+                        key={camera.id}
+                        type="button"
+                        onClick={() => setCameraId(camera.id)}
+                        className={`rounded-2xl border p-4 text-left transition-colors ${
+                          selected
+                            ? "border-violet-300/35 bg-violet-300/10"
+                            : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium text-white">{camera.name}</p>
+                              <Badge className={camera.enabled ? "bg-lime-300/15 text-lime-300" : "bg-slate-300/10 text-slate-500"}>
+                                {camera.enabled ? "Enabled" : "Disabled"}
+                              </Badge>
+                              <Badge variant="outline" className="border-white/[0.08] text-slate-400">
+                                {sourceLabel(camera)}
+                              </Badge>
+                              {selected && <Badge className="bg-violet-300 text-slate-950">Selected</Badge>}
+                            </div>
+                            <p className="truncate font-mono text-xs text-slate-500">{camera.source_url || "No source URL configured"}</p>
+                            <p className="text-xs text-slate-600">{camera.location_name || camera.id}</p>
+                          </div>
+                          <div
+                            className="flex shrink-0 gap-2"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <Button
+                              size="sm"
+                              onClick={() => restartCamera(camera)}
+                              disabled={!canIngest || cameraActionLoading === camera.id}
+                              className="cursor-pointer bg-lime-300 text-slate-950 hover:bg-lime-200"
+                            >
+                              {cameraActionLoading === camera.id ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Play className="mr-1.5 size-3.5" />}
+                              Start
+                            </Button>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedCamera && (
+                <div className="rounded-2xl border border-white/[0.06] bg-slate-950/60 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Active source</p>
+                      <p className="mt-1 text-sm text-slate-200">{selectedCamera.name}</p>
+                    </div>
+                    <Badge className="bg-sky-300/15 text-sky-300">
+                      {selectedCamera.current_mode || "CLEAN"} mode
+                    </Badge>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-black">
+                      {latestLiveFrame?.frame_preview ? (
+                        <div className="relative">
+                          <img
+                            src={latestLiveFrame.frame_preview}
+                            alt="Live processed traffic frame"
+                            className="block w-full bg-black object-contain"
+                          />
+                          {(latestLiveFrame.live_detections ?? []).map((detection) => (
+                            <BoxOverlay
+                              key={detection.id}
+                              detection={detection}
+                              imageSize={liveFrameSize}
+                            />
+                          ))}
+                          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+                            <Badge className="bg-lime-300 text-slate-950">
+                              Live frame #{latestLiveFrame.frame_index ?? "-"}
+                            </Badge>
+                            <Badge className="bg-slate-950/80 text-slate-200">
+                              {latestLiveFrame.annotated_preview ? "Annotated" : "Raw preview"}
+                            </Badge>
+                          </div>
+                          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-slate-950/75 p-2 text-xs text-slate-200 backdrop-blur">
+                            <span>{latestLiveFrame.detections ?? 0} detections</span>
+                            <span>{latestLiveFrame.plates ?? 0} plates</span>
+                            <span>{latestLiveFrame.violations ?? latestLiveFrame.violation_count ?? 0} violations</span>
+                            {latestLiveFrame.latency_ms != null && <span>{latestLiveFrame.latency_ms} ms</span>}
+                          </div>
+                        </div>
                       ) : (
-                        <Video className="size-5 text-slate-500" />
+                        <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-slate-950 text-center">
+                          <Radio className="size-8 animate-pulse text-slate-600" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-300">Waiting for live processed frames</p>
+                            <p className="mt-1 text-xs text-slate-600">
+                              Press Start after your RTSP/file source is reachable. Frames will appear here as SSE previews.
+                            </p>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-200">{demo.label}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{demo.description}</p>
-                    </div>
+
+                    <p className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Live events</p>
+                    {liveError && <p className="text-sm text-amber-200">{liveError}</p>}
+                    {!liveEvents.length && !liveError ? (
+                      <p className="text-sm text-slate-500">
+                        Waiting for frames. Start the RTSP loop and press Start on this camera.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {liveEvents.map((event, index) => (
+                          <div
+                            key={`${event.timestamp ?? index}-${index}`}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-300"
+                          >
+                            <span className="font-mono text-slate-500">{event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : "event"}</span>
+                            <span>{event.type ?? "frame"}</span>
+                            <span>{event.detections ?? 0} detections</span>
+                            <span>{event.violations ?? event.violation_count ?? 0} violations</span>
+                            {event.latency_ms != null && <span>{event.latency_ms} ms</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {sourceMode !== "camera" && cameras.length > 0 && (
+            <div className="space-y-2">
+              <label className="font-metadata text-xs uppercase tracking-widest text-slate-500">
+                Camera context
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {cameras.map((camera) => (
+                  <button
+                    key={camera.id}
+                    type="button"
+                    onClick={() => setCameraId(camera.id)}
+                    className={`rounded-xl border p-3 text-left transition-colors ${
+                      camera.id === cameraId
+                        ? "border-violet-300/35 bg-violet-300/10"
+                        : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-slate-200">{camera.name}</p>
+                    <p className="mt-1 truncate font-mono text-[10px] text-slate-600">{camera.id}</p>
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {sourceMode !== "camera" && cameras.length === 0 && (
+            <div className="space-y-2">
+              <label className="font-metadata text-xs uppercase tracking-widest text-slate-500">
+                Camera ID
+              </label>
+              <Input
+                value={cameraId}
+                onChange={(event) => setCameraId(event.target.value)}
+                className="h-11 border-white/[0.06] bg-white/[0.03]"
+              />
             </div>
           )}
 
@@ -396,29 +681,20 @@ export default function ProcessPage() {
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="font-metadata text-xs uppercase tracking-widest text-slate-500">
-              Camera ID
-            </label>
-            <Input
-              value={cameraId}
-              onChange={(event) => setCameraId(event.target.value)}
-              className="h-11 border-white/[0.06] bg-white/[0.03]"
-            />
-          </div>
-
-          <Button
-            disabled={!file || loading}
-            onClick={submit}
-            className="h-12 w-full cursor-pointer bg-violet-400 text-[#100f18] hover:bg-violet-300"
-          >
-            {loading ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Activity className="mr-2 size-4" />
-            )}
-            Run Inference
-          </Button>
+          {sourceMode !== "camera" && (
+            <Button
+              disabled={!file || loading}
+              onClick={submit}
+              className="h-12 w-full cursor-pointer bg-violet-400 text-[#100f18] hover:bg-violet-300"
+            >
+              {loading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Activity className="mr-2 size-4" />
+              )}
+              Run Inference
+            </Button>
+          )}
 
           {error && (
             <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-100">
@@ -472,10 +748,12 @@ export default function ProcessPage() {
                         {confidence(detection.confidence)}
                       </span>
                     </div>
-                    <p className="mt-2 font-metadata text-xs text-slate-600">
-                      {Math.round(detection.bbox.x1)}, {Math.round(detection.bbox.y1)} \u2192{" "}
-                      {Math.round(detection.bbox.x2)}, {Math.round(detection.bbox.y2)}
-                    </p>
+                    {detection.bbox && (
+                      <p className="mt-2 font-metadata text-xs text-slate-600">
+                        {Math.round(detection.bbox.x1)}, {Math.round(detection.bbox.y1)} -{" "}
+                        {Math.round(detection.bbox.x2)}, {Math.round(detection.bbox.y2)}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

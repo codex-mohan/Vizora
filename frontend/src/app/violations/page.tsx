@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArrowUpRight,
@@ -140,8 +140,10 @@ function exportCsv(items: ViolationListItem[]) {
 
 export default function ViolationsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { token, loading: authLoading } = useAuth();
+  const isReviewQueue = pathname === "/review-queue";
   const [data, setData] = useState<ViolationListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,8 +155,9 @@ export default function ViolationsPage() {
   const [minConfidence, setMinConfidence] = useState<string>("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [reviewOnly, setReviewOnly] = useState(searchParams.get("review_required") === "true");
+  const [reviewOnly, setReviewOnly] = useState(isReviewQueue || searchParams.get("review_required") === "true");
   const [showFilters, setShowFilters] = useState(false);
+  const effectiveReviewOnly = isReviewQueue || reviewOnly;
 
   useEffect(() => {
     if (!authLoading && !token) router.push("/login");
@@ -175,7 +178,7 @@ export default function ViolationsPage() {
           min_confidence: minConfidence ? Number(minConfidence) / 100 : undefined,
           date_from: dateFrom || undefined,
           date_to: dateTo || undefined,
-          review_required: reviewOnly || undefined,
+          review_required: effectiveReviewOnly || undefined,
           token: token ?? undefined,
         });
         if (!cancelled) setData(result);
@@ -189,7 +192,7 @@ export default function ViolationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, size, violationType, plateSearch, minConfidence, dateFrom, dateTo, reviewOnly, token]);
+  }, [page, size, violationType, plateSearch, minConfidence, dateFrom, dateTo, effectiveReviewOnly, token]);
 
   const totalPages = data ? Math.ceil(data.total / size) : 0;
 
@@ -204,7 +207,7 @@ export default function ViolationsPage() {
   }
 
   const hasActiveFilters =
-    violationType || plateSearch || minConfidence || dateFrom || dateTo || reviewOnly;
+    violationType || plateSearch || minConfidence || dateFrom || dateTo || effectiveReviewOnly;
 
   return (
     <main className="min-h-screen px-5 py-6 text-slate-100 sm:px-8 lg:px-10">
@@ -212,9 +215,13 @@ export default function ViolationsPage() {
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-white">
-              Violations
+              {isReviewQueue ? "Review Queue" : "Violations"}
             </h1>
-            <p className="mt-2 text-slate-400">Searchable record of all detected violations.</p>
+            <p className="mt-2 text-slate-400">
+              {isReviewQueue
+                ? "Low-confidence and edge-case violations that need human review."
+                : "Searchable record of all detected violations."}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -238,7 +245,7 @@ export default function ViolationsPage() {
         <Card className="border-white/10 bg-slate-950/55 shadow-2xl shadow-black/25 backdrop-blur-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-heading text-2xl">
-              All Violations
+              {isReviewQueue ? "Review Required" : "All Violations"}
               {data ? (
                 <span className="ml-3 text-base font-normal text-slate-500">
                   ({data.total.toLocaleString()})
@@ -322,12 +329,13 @@ export default function ViolationsPage() {
                     Review Required
                   </label>
                   <Button
-                    variant={reviewOnly ? "default" : "outline"}
+                    variant={effectiveReviewOnly ? "default" : "outline"}
                     size="sm"
                     className={`w-full cursor-pointer ${reviewOnly ? "" : "border-white/15 bg-white/[0.03]"}`}
+                    disabled={isReviewQueue}
                     onClick={() => { setReviewOnly(!reviewOnly); setPage(1); }}
                   >
-                    {reviewOnly ? "Review only" : "All"}
+                    {effectiveReviewOnly ? "Review only" : "All"}
                   </Button>
                 </div>
 

@@ -18,12 +18,13 @@ import {
   User,
   Video,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 
 import { useAuth } from "@/lib/auth-context";
-import { fetchCameras, createCamera, updateCamera, deleteCamera } from "@/lib/api";
+import { fetchCameras, createCamera, deleteCamera, updateCamera } from "@/lib/api";
+import { ORG_SETTINGS_KEY } from "@/lib/org-settings";
 import type { CameraInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,9 @@ interface OrgSettings {
   enable_helmet_detection: boolean;
   enable_seatbelt_detection: boolean;
   evidence_retention_days: string;
+  default_location_name: string;
+  default_location_latitude: string;
+  default_location_longitude: string;
 }
 
 const SOURCE_TYPE_LABELS: Record<SourceType, { label: string; icon: typeof Camera; description: string }> = {
@@ -75,18 +79,69 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   viewer: { label: "Viewer", color: "bg-slate-300/15 text-slate-400" },
 };
 
-function newCameraSource(): CameraSource {
+const CAMERA_DRAFT_KEY = "vizora_camera_sources_draft";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function newCameraSource(settings: OrgSettings): CameraSource {
   return {
-    id: crypto.randomUUID(),
-    name: "",
+    id: `draft-${crypto.randomUUID()}`,
+    name: "New Camera Source",
     url: "",
-    source_type: "http_snapshot",
-    location_name: "",
-    latitude: "",
-    longitude: "",
+    source_type: "rtsp",
+    location_name: settings.default_location_name,
+    latitude: settings.default_location_latitude,
+    longitude: settings.default_location_longitude,
     model_profile: "fast",
     enabled: true,
   };
+}
+
+function isPersistedCamera(id: string) {
+  return UUID_RE.test(id);
+}
+
+function cameraFromApi(camera: CameraInfo): CameraSource {
+  return {
+    id: camera.id,
+    name: camera.name,
+    url: camera.source_url ?? "",
+    source_type: (camera.source_type as SourceType) ?? "http_snapshot",
+    location_name: camera.location_name ?? "",
+    latitude: camera.latitude != null ? String(camera.latitude) : "",
+    longitude: camera.longitude != null ? String(camera.longitude) : "",
+    model_profile: camera.model_profile ?? "fast",
+    enabled: camera.enabled ?? true,
+  };
+}
+
+function cameraToPayload(camera: CameraSource) {
+  return {
+    name: camera.name.trim() || "New Camera Source",
+    location_name: camera.location_name.trim() || undefined,
+    latitude: camera.latitude ? parseFloat(camera.latitude) : undefined,
+    longitude: camera.longitude ? parseFloat(camera.longitude) : undefined,
+    source_type: camera.source_type,
+    source_url: camera.url.trim() || undefined,
+    model_profile: camera.model_profile,
+    enabled: camera.enabled,
+  };
+}
+
+function readCameraDrafts(): CameraSource[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CAMERA_DRAFT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCameraDrafts(cameras: CameraSource[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CAMERA_DRAFT_KEY, JSON.stringify(cameras));
 }
 
 export default function SettingsPage() {
@@ -94,19 +149,85 @@ export default function SettingsPage() {
   const { user, token, loading: authLoading } = useAuth();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [cameraDraftReady, setCameraDraftReady] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyCameraIds = useRef(new Set<string>());
+  const savingCameraIds = useRef(new Set<string>());
 
-  const [settings, setSettings] = useState<OrgSettings>({
-    default_model_profile: "fast",
-    confidence_threshold: "0.35",
-    review_threshold: "0.6",
-    preprocessing_mode: "auto",
-    enable_plate_recognition: true,
-    enable_helmet_detection: true,
-    enable_seatbelt_detection: true,
-    evidence_retention_days: "90",
+  const [settings, setSettings] = useState<OrgSettings>(() => {
+    const defaults: OrgSettings = {
+      default_model_profile: "fast",
+      confidence_threshold: "0.35",
+      review_threshold: "0.6",
+      preprocessing_mode: "auto",
+      enable_plate_recognition: true,
+      enable_helmet_detection: true,
+      enable_seatbelt_detection: true,
+      evidence_retention_days: "90",
+      default_location_name: "Bengaluru Traffic Demo Zone",
+      default_location_latitude: "12.9716",
+      default_location_longitude: "77.5946",
+    };
+
+    if (typeof window === "undefined") return defaults;
+
+    try {
+      const raw = localStorage.getItem(ORG_SETTINGS_KEY);
+      if (!raw) return defaults;
+      const saved = JSON.parse(raw);
+      return saved.settings ? { ...defaults, ...saved.settings } : defaults;
+    } catch {
+      return defaults;
+    }
   });
 
-  const [cameras, setCameras] = useState<CameraSource[]>([]);
+  const [cameras, setCameras] = useState<CameraSource[]>(readCameraDrafts);
+
+  const persistCameraSource = useCallback(async (camera: CameraSource, options?: { silent?: boolean }) => {
+    if (savingCameraIds.current.has(camera.id)) return;
+    savingCameraIds.current.add(camera.id);
+
+    try {
+      const payload = cameraToPayload(camera);
+      let createdCameraId: string | null = null;
+      let shouldResaveCreatedCamera = false;
+
+      if (isPersistedCamera(camera.id)) {
+        const updated = await updateCamera(camera.id, payload);
+        const nextCamera = cameraFromApi(updated);
+        setCameras((prev) => {
+          const next = prev.map((cam) => (cam.id === camera.id ? nextCamera : cam));
+          persistCameraDrafts(next);
+          return next;
+        });
+      } else {
+        const created = await createCamera(payload);
+        createdCameraId = created.id;
+        setCameras((prev) => {
+          const latestDraft = prev.find((cam) => cam.id === camera.id);
+          const nextCamera = latestDraft ? { ...latestDraft, id: created.id } : cameraFromApi(created);
+          shouldResaveCreatedCamera = Boolean(
+            latestDraft && JSON.stringify(cameraToPayload(latestDraft)) !== JSON.stringify(payload),
+          );
+          const next = prev.map((cam) => (cam.id === camera.id ? nextCamera : cam));
+          persistCameraDrafts(next);
+          return next;
+        });
+      }
+      setSaveError(null);
+      dirtyCameraIds.current.delete(camera.id);
+      if (createdCameraId && shouldResaveCreatedCamera) {
+        dirtyCameraIds.current.add(createdCameraId);
+      }
+    } catch (error) {
+      if (!options?.silent) {
+        setSaveError(error instanceof Error ? error.message : "Failed to save camera source.");
+      }
+    } finally {
+      savingCameraIds.current.delete(camera.id);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !token) router.push("/login");
@@ -114,36 +235,46 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    try {
-      const raw = localStorage.getItem("vizora_org_settings");
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved.settings) setSettings((prev) => ({ ...prev, ...saved.settings }));
-      }
-    } catch {
-      // ignore corrupt storage
-    }
+    const drafts = readCameraDrafts();
 
     fetchCameras()
       .then((apiCameras) => {
-        setCameras(
-          apiCameras.map((c) => ({
-            id: c.id,
-            name: c.name,
-            url: c.source_url ?? "",
-            source_type: (c.source_type as SourceType) ?? "http_snapshot",
-            location_name: c.location_name ?? "",
-            latitude: c.latitude != null ? String(c.latitude) : "",
-            longitude: c.longitude != null ? String(c.longitude) : "",
-            model_profile: c.model_profile ?? "fast",
-            enabled: c.enabled ?? true,
-          })),
-        );
+        const draftById = new Map(drafts.map((camera) => [camera.id, camera]));
+        const apiSources = apiCameras.map((camera) => {
+          const mapped = cameraFromApi(camera);
+          return draftById.get(mapped.id) ?? mapped;
+        });
+        const unsavedDrafts = drafts.filter((camera) => !isPersistedCamera(camera.id));
+        const next = [...unsavedDrafts, ...apiSources];
+        setCameras(next);
+        persistCameraDrafts(next);
       })
       .catch(() => {
-        // API unavailable, cameras start empty
+        // Drafts already keep local camera sources available if the API is down.
+      })
+      .finally(() => {
+        setCameraDraftReady(true);
       });
   }, [user]);
+
+  useEffect(() => {
+    if (!cameraDraftReady) return;
+
+    persistCameraDrafts(cameras);
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+
+    autosaveTimer.current = setTimeout(() => {
+      cameras.forEach((camera) => {
+        if (dirtyCameraIds.current.has(camera.id) && (camera.name.trim() || camera.url.trim())) {
+          void persistCameraSource(camera, { silent: true });
+        }
+      });
+    }, 800);
+
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [cameraDraftReady, cameras, persistCameraSource]);
 
   function updateSetting<K extends keyof OrgSettings>(key: K, value: OrgSettings[K]) {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -151,51 +282,58 @@ export default function SettingsPage() {
   }
 
   function addCamera() {
-    const newCam = newCameraSource();
-    setCameras((prev) => [...prev, newCam]);
+    const newCam = newCameraSource(settings);
+    setCameras((prev) => {
+      const next = [...prev, newCam];
+      persistCameraDrafts(next);
+      return next;
+    });
     setSaved(false);
+    setSaveError(null);
+    dirtyCameraIds.current.add(newCam.id);
+    void persistCameraSource(newCam);
   }
 
   function updateCameraLocal(id: string, patch: Partial<CameraSource>) {
-    setCameras((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    setCameras((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...patch } : c));
+      persistCameraDrafts(next);
+      return next;
+    });
     setSaved(false);
+    dirtyCameraIds.current.add(id);
   }
 
   function removeCamera(id: string) {
-    setCameras((prev) => prev.filter((c) => c.id !== id));
+    setCameras((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      persistCameraDrafts(next);
+      return next;
+    });
     setSaved(false);
+    setSaveError(null);
+    dirtyCameraIds.current.delete(id);
+    if (isPersistedCamera(id)) {
+      void deleteCamera(id).catch((error) => {
+        setSaveError(error instanceof Error ? error.message : "Failed to delete camera source.");
+      });
+    }
   }
 
   async function handleSave() {
     setSaving(true);
     setSaved(false);
+    setSaveError(null);
     try {
-      localStorage.setItem("vizora_org_settings", JSON.stringify({ settings }));
+      localStorage.setItem(ORG_SETTINGS_KEY, JSON.stringify({ settings }));
 
       for (const cam of cameras) {
-        const payload = {
-          name: cam.name,
-          location_name: cam.location_name || undefined,
-          latitude: cam.latitude ? parseFloat(cam.latitude) : undefined,
-          longitude: cam.longitude ? parseFloat(cam.longitude) : undefined,
-          source_type: cam.source_type,
-          source_url: cam.url || undefined,
-          model_profile: cam.model_profile,
-          enabled: cam.enabled,
-        };
-
-        const isReal = cam.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-        if (isReal) {
-          await updateCamera(cam.id, payload);
-        } else if (cam.name.trim()) {
-          const created = await createCamera(payload);
-          setCameras((prev) => prev.map((c) => (c.id === cam.id ? { ...c, id: created.id } : c)));
-        }
+        await persistCameraSource(cam);
       }
 
       setSaved(true);
-    } catch {
-      // silent
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save settings.");
     } finally {
       setSaving(false);
     }
@@ -243,6 +381,16 @@ export default function SettingsPage() {
           </motion.div>
         )}
 
+        {saveError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200"
+          >
+            {saveError}
+          </motion.div>
+        )}
+
         <Card className="border-white/10 bg-slate-950/55 shadow-xl shadow-black/20 backdrop-blur-xl">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -285,6 +433,55 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm font-medium text-white">{user.org_name}</p>
                 <p className="font-mono text-[10px] text-slate-600">{user.org_id}</p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div>
+                <p className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Organization Default Location
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Used as the fallback map center and as the default location for new camera sources.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <label className="font-metadata text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                    Location Name
+                  </label>
+                  <Input
+                    value={settings.default_location_name}
+                    onChange={(e) => updateSetting("default_location_name", e.target.value)}
+                    placeholder="e.g. Bengaluru Traffic Demo Zone"
+                    className="h-9 bg-white/5 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-metadata text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                    Latitude
+                  </label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={settings.default_location_latitude}
+                    onChange={(e) => updateSetting("default_location_latitude", e.target.value)}
+                    placeholder="12.9716"
+                    className="h-9 bg-white/5 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-metadata text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                    Longitude
+                  </label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={settings.default_location_longitude}
+                    onChange={(e) => updateSetting("default_location_longitude", e.target.value)}
+                    placeholder="77.5946"
+                    className="h-9 bg-white/5 text-sm"
+                  />
+                </div>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
@@ -433,7 +630,7 @@ export default function SettingsPage() {
                 <div>
                   <CardTitle className="text-lg text-white">Camera Sources</CardTitle>
                   <p className="text-xs text-slate-500">
-                    Configure CCTV endpoints, RTSP streams, or file watchers per location
+                    Configure CCTV endpoints, RTSP streams, or file watchers per location. Sources autosave as you edit.
                   </p>
                 </div>
               </div>

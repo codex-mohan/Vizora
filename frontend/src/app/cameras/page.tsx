@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -14,6 +14,7 @@ import {
 
 import { createCamera, fetchCameras } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { getStoredOrgDefaultLocation, type OrgDefaultLocation } from "@/lib/org-settings";
 import type { CameraInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,11 +62,17 @@ function CameraCardSkeleton() {
   );
 }
 
-function AddCameraForm({ onCreated }: { onCreated: (cam: CameraInfo) => void }) {
+function AddCameraForm({
+  onCreated,
+  defaultLocation,
+}: {
+  onCreated: (cam: CameraInfo) => void;
+  defaultLocation: OrgDefaultLocation;
+}) {
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
+  const [location, setLocation] = useState(defaultLocation.locationName);
+  const [lat, setLat] = useState(String(defaultLocation.latitude));
+  const [lng, setLng] = useState(String(defaultLocation.longitude));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -85,9 +92,9 @@ function AddCameraForm({ onCreated }: { onCreated: (cam: CameraInfo) => void }) 
       onCreated(cam);
       setOpen(false);
       setName("");
-      setLocation("");
-      setLat("");
-      setLng("");
+      setLocation(defaultLocation.locationName);
+      setLat(String(defaultLocation.latitude));
+      setLng(String(defaultLocation.longitude));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create camera");
     } finally {
@@ -199,6 +206,7 @@ export default function CamerasPage() {
   const [cameras, setCameras] = useState<CameraInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const orgDefaultLocation = useMemo(() => getStoredOrgDefaultLocation(), []);
 
   useEffect(() => {
     if (!authLoading && !token) router.push("/login");
@@ -241,7 +249,7 @@ export default function CamerasPage() {
               Camera status, preprocessing mode, and violation counts.
             </p>
           </div>
-          <AddCameraForm onCreated={handleCreated} />
+          <AddCameraForm onCreated={handleCreated} defaultLocation={orgDefaultLocation} />
         </header>
 
         {error && (

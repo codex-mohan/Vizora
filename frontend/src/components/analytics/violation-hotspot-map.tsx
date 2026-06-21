@@ -6,6 +6,7 @@ import { Layers, MapPin, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { HotspotMapResponse } from "@/lib/types";
+import type { OrgDefaultLocation } from "@/lib/org-settings";
 
 type GeoJsonData = Parameters<import("maplibre-gl").GeoJSONSource["setData"]>[0];
 type MapInstance = import("maplibre-gl").Map;
@@ -179,9 +180,16 @@ function collectCoordinates(data: HotspotMapResponse | null) {
   return coordinates;
 }
 
-function fitMapToData(map: MapInstance, data: HotspotMapResponse | null) {
+function centerToLngLat(center: OrgDefaultLocation | null | undefined): [number, number] {
+  return center ? [center.longitude, center.latitude] : FALLBACK_CENTER;
+}
+
+function fitMapToData(map: MapInstance, data: HotspotMapResponse | null, defaultCenter?: OrgDefaultLocation) {
   const coordinates = collectCoordinates(data);
-  if (!coordinates.length) return;
+  if (!coordinates.length) {
+    map.easeTo({ center: centerToLngLat(defaultCenter), zoom: defaultCenter ? 11 : 4, duration: 450 });
+    return;
+  }
 
   if (coordinates.length === 1) {
     map.easeTo({ center: coordinates[0], zoom: 13, duration: 450 });
@@ -251,9 +259,11 @@ function attachPopupHandlers(maplibregl: MapLibreModule, map: MapInstance) {
 export function ViolationHotspotMap({
   data,
   loading,
+  defaultCenter,
 }: {
   data: HotspotMapResponse | null;
   loading: boolean;
+  defaultCenter?: OrgDefaultLocation;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
@@ -267,8 +277,8 @@ export function ViolationHotspotMap({
     dataRef.current = data;
     if (!mapRef.current || !mapReady) return;
     updateMapData(mapRef.current, data);
-    fitMapToData(mapRef.current, data);
-  }, [data, mapReady]);
+    fitMapToData(mapRef.current, data, defaultCenter);
+  }, [data, defaultCenter, mapReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,13 +291,13 @@ export function ViolationHotspotMap({
         const initialData = dataRef.current;
         const initialCenter: [number, number] = initialData?.center
           ? [initialData.center.longitude, initialData.center.latitude]
-          : FALLBACK_CENTER;
+          : centerToLngLat(defaultCenter);
 
         const map = new maplibregl.Map({
           container: containerRef.current,
           style: getMapStyle(),
           center: initialCenter,
-          zoom: initialData?.center ? 11 : 4,
+          zoom: initialData?.center || defaultCenter ? 11 : 4,
           attributionControl: false,
         });
 
@@ -299,7 +309,7 @@ export function ViolationHotspotMap({
         map.on("load", () => {
           addMapLayers(map);
           updateMapData(map, dataRef.current);
-          fitMapToData(map, dataRef.current);
+          fitMapToData(map, dataRef.current, defaultCenter);
           setMapReady(true);
         });
       } catch (error) {
@@ -314,7 +324,7 @@ export function ViolationHotspotMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [defaultCenter]);
 
   return (
     <div className="space-y-4">
@@ -341,7 +351,7 @@ export function ViolationHotspotMap({
 
         {!loading && mapReady && !hasPoints && (
           <div className="absolute inset-x-4 bottom-4 z-10 rounded-lg border border-white/10 bg-slate-950/90 p-3 text-sm text-slate-300 shadow-xl">
-            No geocoded violations yet. Add camera latitude/longitude or scene coordinates to power the map.
+            No geocoded violations yet. Showing the organization default location until camera or violation coordinates arrive.
           </div>
         )}
 

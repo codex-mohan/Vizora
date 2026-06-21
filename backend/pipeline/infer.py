@@ -72,48 +72,62 @@ class InferencePipeline:
             detections = self.detector.detect(preprocessed, img_array=img_array)
             t_detect = time.perf_counter() - t0
 
-            t0 = time.perf_counter()
-            tracks = self.tracker.update(detections, media.mode, image_bytes=media.data)
-            t_track = time.perf_counter() - t0
+            if media.realtime_preview:
+                tracks = []
+                poses = []
+                helmet_scores = {}
+                seatbelt_scores = {}
+                t_track = 0.0
+                t_pose = 0.0
+                t_helmet = 0.0
+                t_seatbelt = 0.0
+                t_anpr = 0.0
+                t_violation = 0.0
+                plates = []
+                violations = []
+            else:
+                t0 = time.perf_counter()
+                tracks = self.tracker.update(detections, media.mode, image_bytes=media.data)
+                t_track = time.perf_counter() - t0
 
-            t0 = time.perf_counter()
-            poses = self.pose_estimator.estimate(preprocessed, detections, img_array=img_array)
-            t_pose = time.perf_counter() - t0
+                t0 = time.perf_counter()
+                poses = self.pose_estimator.estimate(preprocessed, detections, img_array=img_array)
+                t_pose = time.perf_counter() - t0
 
-            t0 = time.perf_counter()
-            helmet_scores = self.helmet_classifier.classify(preprocessed, detections, img_array=img_array)
-            t_helmet = time.perf_counter() - t0
+                t0 = time.perf_counter()
+                helmet_scores = self.helmet_classifier.classify(preprocessed, detections, img_array=img_array)
+                t_helmet = time.perf_counter() - t0
 
-            t0 = time.perf_counter()
-            seatbelt_scores = self.seatbelt_classifier.classify(preprocessed, detections, img_array=img_array)
-            t_seatbelt = time.perf_counter() - t0
+                t0 = time.perf_counter()
+                seatbelt_scores = self.seatbelt_classifier.classify(preprocessed, detections, img_array=img_array)
+                t_seatbelt = time.perf_counter() - t0
 
-        t_anpr = 0.0
-        plates = []
-        t0 = time.perf_counter()
-        violations = self.violation_engine.evaluate(
-            mode=media.mode,
-            scene=scene,
-            detections=detections,
-            tracks=tracks,
-            poses=poses,
-            plates=plates,
-            helmet_scores=helmet_scores,
-            seatbelt_scores=seatbelt_scores,
-        )
-        t_violation = time.perf_counter() - t0
+                t_anpr = 0.0
+                plates = []
+                t0 = time.perf_counter()
+                violations = self.violation_engine.evaluate(
+                    mode=media.mode,
+                    scene=scene,
+                    detections=detections,
+                    tracks=tracks,
+                    poses=poses,
+                    plates=plates,
+                    helmet_scores=helmet_scores,
+                    seatbelt_scores=seatbelt_scores,
+                )
+                t_violation = time.perf_counter() - t0
 
-        if violations:
-            t0 = time.perf_counter()
-            plates = self.anpr.recognize(preprocessed, detections=detections, img_array=img_array)
-            t_anpr = time.perf_counter() - t0
-            if any(plate.review_required for plate in plates):
-                review_reasons.append(ReviewReason.LOW_CONFIDENCE)
+                if violations:
+                    t0 = time.perf_counter()
+                    plates = self.anpr.recognize(preprocessed, detections=detections, img_array=img_array)
+                    t_anpr = time.perf_counter() - t0
+                    if any(plate.review_required for plate in plates):
+                        review_reasons.append(ReviewReason.LOW_CONFIDENCE)
 
-        for violation in violations:
-            for reason in violation.review_reasons:
-                if reason not in review_reasons:
-                    review_reasons.append(reason)
+                for violation in violations:
+                    for reason in violation.review_reasons:
+                        if reason not in review_reasons:
+                            review_reasons.append(reason)
 
         result = InferenceResult(
             request_id=f"req-{uuid4().hex}",
@@ -131,29 +145,34 @@ class InferencePipeline:
             review_required=bool(review_reasons) or any(v.review_required for v in violations),
             review_reasons=review_reasons,
         )
-        evidence = self.evidence_builder.attach(media, result)
-        result = result.model_copy(update={"evidence_packet_id": evidence.id})
+        t_vlm = 0.0
+        t_annotate = 0.0
+        if media.generate_artifacts:
+            evidence = self.evidence_builder.attach(media, result)
+            result = result.model_copy(update={"evidence_packet_id": evidence.id})
 
-        t0 = time.perf_counter()
-        description = self.vlm.describe(result)
-        t_vlm = time.perf_counter() - t0
-        if description:
-            result = result.model_copy(update={"description": description})
+            t0 = time.perf_counter()
+            description = self.vlm.describe(result)
+            t_vlm = time.perf_counter() - t0
+            if description:
+                result = result.model_copy(update={"description": description})
 
-        t0 = time.perf_counter()
-        try:
-            from pipeline.evidence.annotator import annotate_evidence
+            t0 = time.perf_counter()
+            try:
+                from pipeline.evidence.annotator import annotate_evidence
 
-            annotated_bytes = annotate_evidence(
-                media.data,
-                result,
-                face_blur=self.settings.face_blur,
-                plate_redact=self.settings.plate_redact_public,
-            )
-            evidence.annotated_image_bytes = annotated_bytes
-        except Exception:
-            pass
-        t_annotate = time.perf_counter() - t0
+                annotated_bytes = annotate_evidence(
+                    media.data,
+                    result,
+                    face_blur=self.settings.face_blur,
+                    plate_redact=self.settings.plate_redact_public,
+                )
+                evidence.annotated_image_bytes = annotated_bytes
+            except Exception:
+                pass
+            t_annotate = time.perf_counter() - t0
+        else:
+            result = result.model_copy(update={"evidence_packet_id": f"live-{uuid4().hex}"})
 
         t_total = time.perf_counter() - t_total
         logger.info(

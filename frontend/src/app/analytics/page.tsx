@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -34,6 +34,7 @@ import {
   fetchRepeatOffenders,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { getStoredOrgDefaultLocation } from "@/lib/org-settings";
 import type {
   AnalyticsSummary,
   HeatmapCell,
@@ -112,6 +113,7 @@ export default function AnalyticsPage() {
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const orgDefaultLocation = useMemo(() => getStoredOrgDefaultLocation(), []);
 
   useEffect(() => {
     if (!authLoading && !token) router.push("/login");
@@ -233,7 +235,7 @@ export default function AnalyticsPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <ViolationHotspotMap data={hotspotMap} loading={loading} />
+            <ViolationHotspotMap data={hotspotMap} loading={loading} defaultCenter={orgDefaultLocation} />
           </CardContent>
         </Card>
 

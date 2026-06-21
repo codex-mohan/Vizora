@@ -99,6 +99,8 @@ class MediaInput(BaseModel):
     camera_id: str = "demo-camera"
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     mode: ProcessingMode = ProcessingMode.STILL_IMAGE
+    realtime_preview: bool = False
+    generate_artifacts: bool = True
 
 
 class ImageQuality(BaseModel):

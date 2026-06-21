@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import time
 from datetime import datetime, timezone
@@ -50,6 +51,31 @@ class CameraIngestionWorker:
         self._frame_count = 0
         self._classifier_interval = 3
         self._last_detections = []
+
+    def _preview_data_url(self, image_bytes: bytes) -> tuple[str | None, int | None, int | None]:
+        try:
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
+            source_width, source_height = image.size
+            image.thumbnail((960, 540))
+            output = BytesIO()
+            image.save(output, format="JPEG", quality=72, optimize=True)
+            encoded = base64.b64encode(output.getvalue()).decode("ascii")
+            return f"data:image/jpeg;base64,{encoded}", source_width, source_height
+        except Exception:
+            logger.warning("[ingest:%s] Could not encode live preview frame", self.camera_id)
+            return None, None, None
+
+    def _detection_payloads(self, result) -> list[dict]:
+        return [
+            {
+                "id": detection.id,
+                "label": detection.label.value,
+                "confidence": detection.confidence,
+                "bbox": detection.bbox.model_dump(),
+                "metadata": detection.metadata,
+            }
+            for detection in result.detections
+        ]
 
     async def start(self) -> None:
         if self._running:
@@ -160,6 +186,8 @@ class CameraIngestionWorker:
                 timestamp=datetime.now(timezone.utc),
                 mode=ProcessingMode.STILL_IMAGE,
                 content_type="image/jpeg",
+                realtime_preview=True,
+                generate_artifacts=False,
             )
 
             result = await asyncio.get_event_loop().run_in_executor(
@@ -167,18 +195,25 @@ class CameraIngestionWorker:
             )
 
             latency_ms = (time.perf_counter() - t0) * 1000
+            frame_preview, frame_width, frame_height = self._preview_data_url(image_bytes)
 
             event = {
                 "type": "frame_processed",
                 "camera_id": self.camera_id,
                 "camera_name": self.camera_name,
+                "frame_index": self._frame_count,
+                "frame_width": frame_width,
+                "frame_height": frame_height,
                 "timestamp": result.timestamp.isoformat(),
                 "detections": len(result.detections),
+                "live_detections": self._detection_payloads(result),
                 "violations": len(result.violations),
                 "plates": len(result.plates),
                 "latency_ms": round(latency_ms, 1),
                 "model_profile": result.model_profile,
                 "violation_types": [v.violation_type.value for v in result.violations],
+                "frame_preview": frame_preview,
+                "annotated_preview": False,
             }
             realtime_bus.publish(event)
 
@@ -200,7 +235,7 @@ class IngestionManager:
 
     async def start_camera(
         self, camera_id: str, camera_name: str, source_type: str,
-        source_url: str, pipeline, org_id: str | None = None, fps: float = 25.0,
+        source_url: str, pipeline, org_id: str | None = None, fps: float = 8.0,
     ) -> None:
         if camera_id in self._workers:
             await self.stop_camera(camera_id)

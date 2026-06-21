@@ -24,18 +24,17 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
-const dashboardRoutes = ["/dashboard", "/process", "/analytics", "/violations", "/cameras", "/evidence", "/settings"];
+const dashboardRoutes = ["/dashboard", "/process", "/analytics", "/violations", "/review-queue", "/cameras", "/evidence", "/settings"];
 
 const primaryNav = [
   { href: "/dashboard", label: "Overview", description: "KPIs and live signal", icon: LayoutDashboard },
   { href: "/process", label: "Process", description: "Upload evidence", icon: Upload },
   { href: "/violations", label: "Violations", description: "Search records", icon: ClipboardCheck },
   { href: "/cameras", label: "Cameras", description: "Preprocessing modes", icon: Camera },
-  { href: "/settings", label: "Settings", description: "Org config & sources", icon: Settings2 },
 ];
 
 const secondaryNav = [
-  { href: "/violations?review_required=true", label: "Review Queue", description: "Low confidence cases", icon: FileSearch2 },
+  { href: "/review-queue", label: "Review Queue", description: "Low confidence cases", icon: FileSearch2 },
 ];
 
 const routeTitles: Record<string, { title: string; eyebrow: string }> = {
@@ -43,6 +42,7 @@ const routeTitles: Record<string, { title: string; eyebrow: string }> = {
   "/analytics": { title: "Overview", eyebrow: "Command center" },
   "/process": { title: "Process Evidence", eyebrow: "Upload and inference" },
   "/violations": { title: "Violations", eyebrow: "Evidence records" },
+  "/review-queue": { title: "Review Queue", eyebrow: "Human review" },
   "/cameras": { title: "Cameras", eyebrow: "Preprocessing state" },
   "/settings": { title: "Settings", eyebrow: "Organization config" },
   "/evidence": { title: "Evidence Viewer", eyebrow: "Packet review" },
@@ -184,7 +184,15 @@ function Sidebar({
         </div>
       </div>
 
-      <div className="border-t border-white/[0.08] p-3">
+      <div className="space-y-2 border-t border-white/[0.08] p-3">
+        <NavLink
+          href="/settings"
+          label="Settings"
+          description="Org config & sources"
+          icon={Settings2}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
         <div className={cn("rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 transition-all duration-300 hover:border-violet-300/20 hover:bg-white/[0.05]", collapsed && "flex justify-center p-2")}>
           {collapsed ? (
             <button

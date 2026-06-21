@@ -82,6 +82,7 @@ async def list_cameras(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_camera(
     body: CameraCreate,
+    request: Request,
     current_user: CurrentUser = Depends(require_role("admin", "reviewer")),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -100,6 +101,19 @@ async def create_camera(
     db.add(camera)
     await db.flush()
     await db.refresh(camera)
+
+    if camera.enabled and camera.source_url:
+        from pipeline.ingest.worker import ingestion_manager
+
+        await ingestion_manager.start_camera(
+            camera_id=str(camera.id),
+            camera_name=camera.name,
+            source_type=camera.source_type or "http_snapshot",
+            source_url=camera.source_url,
+            pipeline=request.app.state.inference_pipeline,
+            org_id=str(camera.org_id),
+        )
+
     return _cam_dict(camera)
 
 

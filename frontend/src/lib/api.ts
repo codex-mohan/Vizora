@@ -46,7 +46,9 @@ async function apiFetch<T>(path: string, init?: RequestInit & { token?: string }
     const message = await response.text();
     throw new Error(message || `Request failed with ${response.status}`);
   }
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export async function processMedia(file: File, cameraId: string, mode: "still_image" | "temporal_burst") {
