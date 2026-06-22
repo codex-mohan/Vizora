@@ -49,16 +49,20 @@ class InferencePipeline:
         self.violation_engine = ViolationEngine()
         self.evidence_builder = EvidencePacketBuilder()
 
-    def process(self, media: MediaInput) -> InferenceResult:
+    def process(self, media: MediaInput, img_array: np.ndarray | None = None) -> InferenceResult:
         t_total = time.perf_counter()
         scene = load_scene_config(BACKEND_ROOT / self.settings.camera_scenes_path, media.camera_id)
 
         t0 = time.perf_counter()
-        preprocessed = self.preprocessor.run(media, self.profile)
+        if media.realtime_preview:
+            preprocessed = self.preprocessor.quick(media)
+        else:
+            preprocessed = self.preprocessor.run(media, self.profile)
         t_preprocess = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        img_array = np.asarray(Image.open(BytesIO(media.data)).convert("RGB"))
+        if img_array is None:
+            img_array = np.asarray(Image.open(BytesIO(media.data)).convert("RGB"))
         t_decode = time.perf_counter() - t0
 
         review_reasons: list[ReviewReason] = []

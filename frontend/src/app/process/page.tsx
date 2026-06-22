@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { fetchCameras, processMedia, realtimeEventsUrl, updateCamera } from "@/lib/api";
@@ -124,7 +124,7 @@ const DETECTION_LEGEND = [
   detectionStyle("plate"),
 ];
 
-function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; imageSize: ImageSize | null }) {
+const BoxOverlay = memo(function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; imageSize: ImageSize | null }) {
   if (!imageSize || !detection.bbox) return null;
 
   const style = detectionStyle(detection.label);
@@ -143,7 +143,7 @@ function BoxOverlay({ detection, imageSize }: { detection: DetectedObject; image
       </span>
     </div>
   );
-}
+});
 
 function SourceModeTab({
   active,
@@ -171,6 +171,53 @@ function SourceModeTab({
     </button>
   );
 }
+
+const LiveFramePreview = memo(function LiveFramePreview({ event }: { event: LiveEvent | null }) {
+  const liveFrameSize: ImageSize | null = event?.frame_width && event?.frame_height
+    ? { width: event.frame_width, height: event.frame_height }
+    : null;
+
+  if (!event?.frame_preview) {
+    return (
+      <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-slate-950 text-center">
+        <Radio className="size-8 animate-pulse text-slate-600" />
+        <div>
+          <p className="text-sm font-medium text-slate-300">Waiting for live processed frames</p>
+          <p className="mt-1 text-xs text-slate-600">
+            Press Start after your RTSP/file source is reachable. Frames will appear here as SSE previews.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <img
+        src={event.frame_preview}
+        alt="Live processed traffic frame"
+        className="block w-full bg-black object-contain"
+      />
+      {(event.live_detections ?? []).map((detection) => (
+        <BoxOverlay key={detection.id} detection={detection} imageSize={liveFrameSize} />
+      ))}
+      <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+        <Badge className="bg-lime-300 text-slate-950">
+          Live frame #{event.frame_index ?? "-"}
+        </Badge>
+        <Badge className="bg-slate-950/80 text-slate-200">
+          {event.annotated_preview ? "Annotated" : "Raw preview"}
+        </Badge>
+      </div>
+      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-slate-950/75 p-2 text-xs text-slate-200 backdrop-blur">
+        <span>{event.detections ?? 0} detections</span>
+        <span>{event.plates ?? 0} plates</span>
+        <span>{event.violations ?? event.violation_count ?? 0} violations</span>
+        {event.latency_ms != null && <span>{event.latency_ms} ms</span>}
+      </div>
+    </div>
+  );
+});
 
 export default function ProcessPage() {
   const router = useRouter();
@@ -337,10 +384,6 @@ export default function ProcessPage() {
       setCameraActionLoading(null);
     }
   }
-
-  const liveFrameSize = latestLiveFrame?.frame_width && latestLiveFrame.frame_height
-    ? { width: latestLiveFrame.frame_width, height: latestLiveFrame.frame_height }
-    : null;
 
   async function submit() {
     if (!file) return;
@@ -535,46 +578,7 @@ export default function ProcessPage() {
                   </div>
                   <div className="mt-4 space-y-2">
                     <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-black">
-                      {latestLiveFrame?.frame_preview ? (
-                        <div className="relative">
-                          <img
-                            src={latestLiveFrame.frame_preview}
-                            alt="Live processed traffic frame"
-                            className="block w-full bg-black object-contain"
-                          />
-                          {(latestLiveFrame.live_detections ?? []).map((detection) => (
-                            <BoxOverlay
-                              key={detection.id}
-                              detection={detection}
-                              imageSize={liveFrameSize}
-                            />
-                          ))}
-                          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                            <Badge className="bg-lime-300 text-slate-950">
-                              Live frame #{latestLiveFrame.frame_index ?? "-"}
-                            </Badge>
-                            <Badge className="bg-slate-950/80 text-slate-200">
-                              {latestLiveFrame.annotated_preview ? "Annotated" : "Raw preview"}
-                            </Badge>
-                          </div>
-                          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-slate-950/75 p-2 text-xs text-slate-200 backdrop-blur">
-                            <span>{latestLiveFrame.detections ?? 0} detections</span>
-                            <span>{latestLiveFrame.plates ?? 0} plates</span>
-                            <span>{latestLiveFrame.violations ?? latestLiveFrame.violation_count ?? 0} violations</span>
-                            {latestLiveFrame.latency_ms != null && <span>{latestLiveFrame.latency_ms} ms</span>}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-slate-950 text-center">
-                          <Radio className="size-8 animate-pulse text-slate-600" />
-                          <div>
-                            <p className="text-sm font-medium text-slate-300">Waiting for live processed frames</p>
-                            <p className="mt-1 text-xs text-slate-600">
-                              Press Start after your RTSP/file source is reachable. Frames will appear here as SSE previews.
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      <LiveFramePreview event={latestLiveFrame} />
                     </div>
 
                     <p className="font-metadata text-xs uppercase tracking-[0.2em] text-slate-500">Live events</p>

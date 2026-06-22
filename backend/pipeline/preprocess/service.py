@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from io import BytesIO
 
 from PIL import Image, ImageFilter, ImageStat, UnidentifiedImageError
@@ -16,9 +17,13 @@ class PreprocessingService:
     def __init__(self, settings: Settings, camera_states: CameraStateRegistry) -> None:
         self._settings = settings
         self._camera_states = camera_states
+        self._cached_quality: dict[str, ImageQuality] = {}
+        self._last_score_time: dict[str, float] = {}
 
-    def run(self, media: MediaInput, profile: ModelProfile) -> PreprocessedImage:
+    def run(self, media: MediaInput, profile: ModelProfile | None = None) -> PreprocessedImage:
         quality = self._score_quality(media.data)
+        self._cached_quality[media.camera_id] = quality
+        self._last_score_time[media.camera_id] = time.time()
         camera_mode = self._camera_states.update(
             media.camera_id,
             FrameQuality(
@@ -28,14 +33,15 @@ class PreprocessingService:
                 noise=quality.noise,
             ),
         )
-        applied_steps = list(profile.preprocessing.always_on)
-
-        if camera_mode.value == "LOWLIGHT" and profile.preprocessing.lowlight_model.value != "disabled":
-            applied_steps.append(profile.preprocessing.lowlight_model.value)
-        if camera_mode.value == "HAZE" and profile.preprocessing.haze_model.value != "disabled":
-            applied_steps.append(profile.preprocessing.haze_model.value)
-        if camera_mode.value == "RAIN" and profile.preprocessing.rain_model.value != "disabled":
-            applied_steps.append(profile.preprocessing.rain_model.value)
+        applied_steps: list[str] = []
+        if profile is not None:
+            applied_steps = list(profile.preprocessing.always_on)
+            if camera_mode.value == "LOWLIGHT" and profile.preprocessing.lowlight_model.value != "disabled":
+                applied_steps.append(profile.preprocessing.lowlight_model.value)
+            if camera_mode.value == "HAZE" and profile.preprocessing.haze_model.value != "disabled":
+                applied_steps.append(profile.preprocessing.haze_model.value)
+            if camera_mode.value == "RAIN" and profile.preprocessing.rain_model.value != "disabled":
+                applied_steps.append(profile.preprocessing.rain_model.value)
 
         return PreprocessedImage(
             media=media,
@@ -43,6 +49,23 @@ class PreprocessingService:
             applied_steps=applied_steps,
             camera_mode=camera_mode.value,
         )
+
+    def quick(self, media: MediaInput) -> PreprocessedImage:
+        now = time.time()
+        last = self._last_score_time.get(media.camera_id, 0.0)
+        if now - last >= self._settings.camera_eval_interval_s:
+            return self.run(media)
+
+        cached = self._cached_quality.get(media.camera_id)
+        if cached is not None:
+            mode = self._camera_states.get(media.camera_id).mode.value
+            return PreprocessedImage(
+                media=media,
+                quality=cached,
+                applied_steps=[],
+                camera_mode=mode,
+            )
+        return self.run(media)
 
     def _score_quality(self, data: bytes) -> ImageQuality:
         try:

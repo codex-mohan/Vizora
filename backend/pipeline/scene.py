@@ -75,10 +75,20 @@ def default_scene_config(camera_id: str) -> CameraSceneConfig:
     return CameraSceneConfig(camera_id=camera_id, location_name="Demo camera")
 
 
+_scene_cache: dict[str, CameraSceneConfig] = {}
+
+
 def load_scene_config(path: str | Path, camera_id: str) -> CameraSceneConfig:
+    cache_key = f"{path}:{camera_id}"
+    cached = _scene_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     config_path = Path(path)
     if not config_path.exists():
-        return default_scene_config(camera_id)
+        result = default_scene_config(camera_id)
+        _scene_cache[cache_key] = result
+        return result
 
     with config_path.open("r", encoding="utf-8") as file:
         raw = yaml.safe_load(file) or {}
@@ -86,5 +96,9 @@ def load_scene_config(path: str | Path, camera_id: str) -> CameraSceneConfig:
     cameras = raw.get("cameras", {})
     camera_config = cameras.get(camera_id)
     if camera_config is None:
-        return default_scene_config(camera_id)
-    return CameraSceneConfig.model_validate(camera_config)
+        result = default_scene_config(camera_id)
+    else:
+        result = CameraSceneConfig.model_validate(camera_config)
+
+    _scene_cache[cache_key] = result
+    return result

@@ -76,7 +76,6 @@ class YoloClassifierAdapter:
             img_array,
             conf=self.config.confidence_threshold,
             verbose=False,
-            device=get_device(),
             half=use_half(),
         )
         if not results:
@@ -120,6 +119,7 @@ class YoloClassifierAdapter:
             logger.warning("[%s] Weights not found: %s", self.label, weight_path)
             return None
         self._model = YOLO(str(weight_path))
+        self._model.to(get_device())
         logger.info("[%s] Loaded YOLO detector from %s", self.label, weight_path)
         return self._model
 

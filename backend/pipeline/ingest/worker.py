@@ -7,6 +7,7 @@ import base64
 import logging
 import time
 from datetime import datetime, timezone
+from functools import partial
 from io import BytesIO
 
 import cv2
@@ -190,12 +191,13 @@ class CameraIngestionWorker:
                 generate_artifacts=False,
             )
 
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, self.pipeline.process, media
+            loop = asyncio.get_event_loop()
+            result, (frame_preview, frame_width, frame_height) = await asyncio.gather(
+                loop.run_in_executor(None, partial(self.pipeline.process, media, img_array=img_array)),
+                loop.run_in_executor(None, self._preview_data_url, image_bytes),
             )
 
             latency_ms = (time.perf_counter() - t0) * 1000
-            frame_preview, frame_width, frame_height = self._preview_data_url(image_bytes)
 
             event = {
                 "type": "frame_processed",
@@ -235,7 +237,7 @@ class IngestionManager:
 
     async def start_camera(
         self, camera_id: str, camera_name: str, source_type: str,
-        source_url: str, pipeline, org_id: str | None = None, fps: float = 8.0,
+        source_url: str, pipeline, org_id: str | None = None, fps: float = 25.0,
     ) -> None:
         if camera_id in self._workers:
             await self.stop_camera(camera_id)

@@ -45,7 +45,6 @@ class PoseEstimatorAdapter:
             img_array,
             conf=self.config.confidence_threshold,
             verbose=False,
-            device=get_device(),
             half=use_half(),
         )
         if not results or not results[0].keypoints:
@@ -76,6 +75,7 @@ class PoseEstimatorAdapter:
             return self._model
         model_name = YOLO_POSE_MODELS.get(self.config.choice, "yolo11n-pose.pt")
         self._model = YOLO(model_name)
+        self._model.to(get_device())
         return self._model
 
 

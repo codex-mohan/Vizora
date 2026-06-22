@@ -117,7 +117,6 @@ class DetectorAdapter:
             conf=self.config.confidence_threshold,
             iou=self.config.iou_threshold,
             verbose=False,
-            device=get_device(),
             half=use_half(),
         )
         if not results:
@@ -200,6 +199,7 @@ class DetectorAdapter:
             else:
                 model_path = RTDETR_MODEL_NAMES.get(self.config.choice, "rtdetr-l.pt")
             self._model = YOLO(model_path)
+            self._model.to(get_device())
             return self._model
 
         if self.config.weights and (BACKEND_ROOT / self.config.weights).exists():
@@ -207,6 +207,7 @@ class DetectorAdapter:
         else:
             model_path = YOLO_MODEL_NAMES[self.config.choice]
         self._model = YOLO(model_path)
+        self._model.to(get_device())
         return self._model
 
     def _load_dfine(self):
@@ -255,7 +256,6 @@ class DetectorAdapter:
             conf=self.config.confidence_threshold,
             iou=self.config.iou_threshold,
             verbose=False,
-            device=get_device(),
             half=use_half(),
         )
         if not results:
